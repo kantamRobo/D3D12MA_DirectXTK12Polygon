@@ -143,7 +143,6 @@ void DeviceResources::CreateDeviceResources()
         }
     }
 
-    ComPtr<IDXGIAdapter1> adapter;
     GetAdapter(adapter.GetAddressOf());
 
     // Create the DX12 API device object.

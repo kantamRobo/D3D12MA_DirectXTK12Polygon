@@ -1,16 +1,16 @@
 //
 // Game.cpp
 //
-#include "D3D12MemAlloc.h"
+
 #include "pch.h"
 #include "Game.h"
-
+#include "D3D12MAHelloTriangle.h"
 extern void ExitGame() noexcept;
 
 using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
-
+D3D12MAHelloTriangle renderer;
 Game::Game() noexcept(false)
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();
@@ -92,8 +92,8 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
-
-    PIXEndEvent(commandList);
+    renderer.PopulateCommandList(m_deviceResources.get()
+    );    PIXEndEvent(commandList);
 
     // Show the new frame.
     PIXBeginEvent(PIX_COLOR_DEFAULT, L"Present");
@@ -204,6 +204,7 @@ void Game::CreateDeviceDependentResources()
     // m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
     // TODO: Initialize device dependent objects here (independent of window size).
+    renderer.LoadAssets(m_deviceResources.get());
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.

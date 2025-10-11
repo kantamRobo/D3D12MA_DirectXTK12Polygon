@@ -11,7 +11,7 @@
 #include <DescriptorHeap.h>
 struct SceneConstantBuffer
 {
-	XMFLOAT4 offset;
+	DirectX::XMFLOAT4 offset;
 	float padding[60]; // Padding so the constant buffer is 256-byte aligned.
 };
 class D3D12MAHelloConstBuffers

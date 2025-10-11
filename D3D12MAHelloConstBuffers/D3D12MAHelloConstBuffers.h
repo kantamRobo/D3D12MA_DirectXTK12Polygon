@@ -5,7 +5,7 @@
 #include <dxgi1_6.h>
 #include <DirectXMath.h>
 #include <wrl.h>
-#include "../D3D12MA_DirectXTK12Polygon/DeviceResources.h"
+#include <DeviceResources.h>
 #include <string>
 #include <memory>
 #include <DescriptorHeap.h>
@@ -17,6 +17,7 @@ struct SceneConstantBuffer
 class D3D12MAHelloConstBuffers
 {
 public:
+	D3D12MAHelloConstBuffers();
 	D3D12MAHelloConstBuffers(UINT width, UINT height, std::wstring name);
 	void OnInit(DX::DeviceResources* DR);
 	
@@ -24,7 +25,7 @@ public:
 	struct Vertex
 	{
 		DirectX::XMFLOAT3 position;
-		DirectX::XMFLOAT4 color;
+		
 	};
 	UINT8* m_pCbvDataBegin;
 public:

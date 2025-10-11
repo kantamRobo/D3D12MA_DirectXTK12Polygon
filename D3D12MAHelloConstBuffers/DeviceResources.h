@@ -23,7 +23,7 @@ namespace DX
         static constexpr unsigned int c_AllowTearing = 0x1;
         static constexpr unsigned int c_EnableHDR    = 0x2;
         static constexpr unsigned int c_ReverseDepth = 0x4;
-
+        Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
         DeviceResources(DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM,
                         DXGI_FORMAT depthBufferFormat = DXGI_FORMAT_D32_FLOAT,
                         UINT backBufferCount = 2,
@@ -108,7 +108,7 @@ namespace DX
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>   m_commandList;
         Microsoft::WRL::ComPtr<ID3D12CommandQueue>          m_commandQueue;
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>      m_commandAllocators[MAX_BACK_BUFFER_COUNT];
-
+       
         // Swap chain objects.
         Microsoft::WRL::ComPtr<IDXGIFactory4>               m_dxgiFactory;
         Microsoft::WRL::ComPtr<IDXGISwapChain3>             m_swapChain;

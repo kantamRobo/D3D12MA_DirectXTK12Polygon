@@ -23,6 +23,7 @@ enum Descriptors
 //
 //*********************************************************
 
+D3D12MAHelloConstBuffers::D3D12MAHelloConstBuffers(){}
 
 D3D12MAHelloConstBuffers::D3D12MAHelloConstBuffers(UINT width, UINT height, std::wstring name) :
    
@@ -51,7 +52,7 @@ void D3D12MAHelloConstBuffers::LoadPipeline(DX::DeviceResources* DR)
         // and that descriptors contained in it can be referenced by a root table.
 
 
-        m_cbvHeap = std::make_unique<DescriptorHeap>(device, Descriptors::Count);
+        m_cbvHeap = std::make_unique<DirectX::DescriptorHeap>(device,Descriptors::Count);
 
        
     }
@@ -73,11 +74,11 @@ void  D3D12MAHelloConstBuffers::LoadAssets(DX::DeviceResources* DR)
 
 
         CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-        CD3DX12_ROOT_PARAMETER1 rootParameters[2];
+        CD3DX12_ROOT_PARAMETER1 rootParameters[1];
 
-        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-        rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
-		rootParameters[1].InitAsConstants(1, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+        
+		rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC);
         // Allow input layout and deny uneccessary access to certain pipeline stages.
         D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
             D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
@@ -92,6 +93,10 @@ void  D3D12MAHelloConstBuffers::LoadAssets(DX::DeviceResources* DR)
         Microsoft::WRL::ComPtr<ID3DBlob> signature;
         Microsoft::WRL::ComPtr<ID3DBlob> error;
         D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error);
+        if(error != nullptr)
+        {
+            OutputDebugStringA((char*)error->GetBufferPointer());
+		}
         device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
     }
 
@@ -107,14 +112,23 @@ void  D3D12MAHelloConstBuffers::LoadAssets(DX::DeviceResources* DR)
         UINT compileFlags = 0;
 #endif
 
-        D3DCompileFromFile(L"VertexShader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr);
-        D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr);
+        Microsoft::WRL::ComPtr<ID3DBlob>errorvert = nullptr;
+        Microsoft::WRL::ComPtr<ID3DBlob>errorpixel = nullptr;
+        D3DCompileFromFile(L"VertexShader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, errorvert.GetAddressOf());
+        D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, errorpixel.GetAddressOf());
+
+    if (errorvert != nullptr) {
+            OutputDebugStringA((char*)errorvert->GetBufferPointer());
+	}
+    if (errorpixel != nullptr) {
+        OutputDebugStringA((char*)errorpixel->GetBufferPointer());
+    }
 
         // Define the vertex input layout.
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
         {
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+           
         };
 
         // Describe and create the graphics pipeline state object (PSO).
@@ -130,7 +144,7 @@ void  D3D12MAHelloConstBuffers::LoadAssets(DX::DeviceResources* DR)
         psoDesc.SampleMask = UINT_MAX;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.NumRenderTargets = 1;
-        psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        psoDesc.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
         psoDesc.SampleDesc.Count = 1;
 
         device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
@@ -145,9 +159,9 @@ void  D3D12MAHelloConstBuffers::LoadAssets(DX::DeviceResources* DR)
         // Define the geometry for a triangle.
         Vertex triangleVertices[] =
         {
-            { { 0.0f, 0.25f , 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 0.25f, -0.25f , 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { -0.25f, -0.25f , 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+            { { 0.0f, 0.25f , 0.0f }},
+            { { 0.25f, -0.25f , 0.0f } },
+            { { -0.25f, -0.25f , 0.0f } }
         };
 
         const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -252,7 +266,8 @@ void  D3D12MAHelloConstBuffers::PopulateCommandList(DX::DeviceResources* DR)
     commandList->SetGraphicsRootSignature(m_rootSignature.Get());
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	commandList->SetDescriptorHeaps(1, ppHeaps);
-	commandList->SetGraphicsRootDescriptorTable(0, m_cbvHeap->GetGpuHandle(0));
+	commandList->SetGraphicsRootConstantBufferView(0, m_constantBuffer->GetGPUVirtualAddress());
+	
     commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
     commandList->DrawInstanced(3, 1, 0, 0);
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "DeviceResources.h"
+#include "D3D12MAHelloConstBuffers.h"
 #include "StepTimer.h"
 
 
@@ -57,7 +57,7 @@ private:
 
     // Device resources.
     std::unique_ptr<DX::DeviceResources>        m_deviceResources;
-
+    D3D12MAHelloConstBuffers m_renderer;
     // Rendering loop timer.
     DX::StepTimer                               m_timer;
 

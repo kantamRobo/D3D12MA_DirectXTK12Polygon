@@ -94,7 +94,7 @@ void Game::Render()
     // TODO: Add your rendering code here.
 
     PIXEndEvent(commandList);
-
+	m_renderer.OnRender(m_deviceResources.get());
     // Show the new frame.
     PIXBeginEvent(PIX_COLOR_DEFAULT, L"Present");
     m_deviceResources->Present();
@@ -189,21 +189,13 @@ void Game::CreateDeviceDependentResources()
 {
     auto device = m_deviceResources->GetD3DDevice();
 
-    // Check Shader Model 6 support
-    D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = { D3D_SHADER_MODEL_6_0 };
-    if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel)))
-        || (shaderModel.HighestShaderModel < D3D_SHADER_MODEL_6_0))
-    {
-#ifdef _DEBUG
-        OutputDebugStringA("ERROR: Shader Model 6.0 is not supported!\n");
-#endif
-        throw std::runtime_error("Shader Model 6.0 is not supported!");
-    }
+    
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     // m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
     // TODO: Initialize device dependent objects here (independent of window size).
+	m_renderer.OnInit(m_deviceResources.get());
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.

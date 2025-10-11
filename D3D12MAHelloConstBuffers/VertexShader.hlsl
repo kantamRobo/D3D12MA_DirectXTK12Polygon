@@ -20,15 +20,14 @@ struct VS_OUTPUT
 VS_OUTPUT VSMain(VS_INPUT input)
 {
     VS_OUTPUT output;
-    /*
+    
     // ワールド変換、ビュー変換、プロジェクション変換を適用
     float4 worldPosition = mul(input.pos, World);
     float4 viewPosition = mul(worldPosition, View);
     
     output.pos = mul(viewPosition, Projection);
-    */
+    
 
-    output.pos = input.pos;
    
 
 

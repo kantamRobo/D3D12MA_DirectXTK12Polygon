@@ -228,17 +228,29 @@ void  D3D12MAHelloConstBuffers::LoadAssets(DX::DeviceResources* DR)
 }
 
 // Update frame-based values.
-void  D3D12MAHelloConstBuffers::OnUpdate()
+void  D3D12MAHelloConstBuffers::OnUpdate(DX::DeviceResources* DR)
 {
-    const float translationSpeed = 0.005f;
-    const float offsetBounds = 1.25f;
+    using namespace DirectX;
+    auto sz = DR->GetOutputSize();
+    float aspect = float(sz.right - sz.left) / float(sz.bottom - sz.top);
 
-    m_constantBufferData.offset.x += translationSpeed;
-    if (m_constantBufferData.offset.x > offsetBounds)
-    {
-        m_constantBufferData.offset.x = -offsetBounds;
-    }
-    memcpy(m_pCbvDataBegin, &m_constantBufferData, sizeof(m_constantBufferData));
+
+    XMMATRIX world = XMMatrixIdentity();
+   
+    XMVECTOR eye = XMVectorSet(0.0f, 0.0f, -2.0f, 0.0f);  // ‹——£‚ÍD‚Ý‚Å -1.5f`-5.0f ‚­‚ç‚¢
+    XMVECTOR focus = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+    XMMATRIX view = XMMatrixLookAtLH(eye, focus, up);
+    XMMATRIX proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0f), aspect, 0.1f, 100.0f);
+
+    SceneConstantBuffer cb;
+    XMStoreFloat4x4(&cb.world, XMMatrixTranspose(world));
+    XMStoreFloat4x4(&cb.view, XMMatrixTranspose(view));
+    XMStoreFloat4x4(&cb.projection, XMMatrixTranspose(proj));
+
+    memcpy(m_pCbvDataBegin, &cb, sizeof(cb));
+
 }
 
 // Render the scene.
@@ -254,6 +266,7 @@ void  D3D12MAHelloConstBuffers::OnRender(DX::DeviceResources* DR)
 void  D3D12MAHelloConstBuffers::PopulateCommandList(DX::DeviceResources* DR)
 {
     auto device = DR->GetD3DDevice();
+
     auto  commandList = DR->GetCommandList();
     auto commandqueue = DR->GetCommandQueue();
     ResourceUploadBatch upload(device);

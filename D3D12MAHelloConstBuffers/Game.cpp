@@ -94,7 +94,9 @@ void Game::Render()
     // TODO: Add your rendering code here.
 
     PIXEndEvent(commandList);
+    
 	m_renderer.OnRender(m_deviceResources.get());
+	m_renderer.OnUpdate(m_deviceResources.get());
     // Show the new frame.
     PIXBeginEvent(PIX_COLOR_DEFAULT, L"Present");
     m_deviceResources->Present();

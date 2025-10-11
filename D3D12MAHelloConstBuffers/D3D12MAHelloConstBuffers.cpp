@@ -73,10 +73,10 @@ void  D3D12MAHelloConstBuffers::LoadAssets(DX::DeviceResources* DR)
 
 
 
-        CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+       // CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
         CD3DX12_ROOT_PARAMETER1 rootParameters[1];
 
-        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+        //ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
         
 		rootParameters[0].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC);
         // Allow input layout and deny uneccessary access to certain pipeline stages.

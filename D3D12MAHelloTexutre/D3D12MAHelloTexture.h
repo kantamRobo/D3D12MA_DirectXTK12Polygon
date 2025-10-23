@@ -5,6 +5,7 @@
 #include <dxgi1_4.h>
 #include <DirectXMath.h>
 #include <DeviceResources.h>
+#include <DirectXTex.h>
 class D3D12MAHelloTexture
 {
 public:

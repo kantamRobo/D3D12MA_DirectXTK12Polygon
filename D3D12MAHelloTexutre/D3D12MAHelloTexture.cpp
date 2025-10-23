@@ -2,6 +2,7 @@
 #include "D3D12MAHelloTexture.h"
 #include "D3D12MemAlloc.h"
 #include <vector>
+using namespace DirectX;
 D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 //Create the texture.
 
@@ -50,18 +51,69 @@ D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
             allocator->CreateResource(&allocDesc, &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
 				D3D12_RESOURCE_STATE_GENERIC_READ, NULL, &alloc, IID_PPV_ARGS(&uploadBuffer));
-        
+        HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        if (FAILED(hr))
+        {
+            wprintf(L"Failed to initialize COM (%08X)\n", static_cast<unsigned int>(hr));
+           
+        }
+
+        ScratchImage image;
+        hr = LoadFromWICFile(L"texture.png", WIC_FLAGS_NONE, nullptr, image);
+        if (FAILED(hr))
+        {
+            wprintf(L"Failed to load texture.png (%08X)\n", static_cast<unsigned int>(hr));
+            
+        }
 
         Microsoft::WRL::ComPtr<ID3D12Resource> textureUploadHeap;
 
         // Copy data to the intermediate upload heap and then schedule a copy 
         // from the upload heap to the Texture2D.
-        std::vector<UINT8> texture = GenerateTextureData();
-    D3D12_SUBRESOURCE_DATA textureData = {};
-    textureData.pData = &texture[0];
-    textureData.RowPitch = TextureWidth * TexturePixelSize;
-    textureData.SlicePitch = textureData.RowPitch * TextureHeight;
+       
+        DirectX::TexMetadata metadata = {};
+        DirectX::ScratchImage scratchImg = {};
+        std::vector<D3D12_SUBRESOURCE_DATA> textureSubresources;
+        {
+            ThrowIfFailed(LoadFromWICFile(L"Assets/test_image.png", DirectX::WIC_FLAGS_NONE, &metadata, scratchImg));
+            ThrowIfFailed(PrepareUpload(device_.Get(), scratchImg.GetImages(), scratchImg.GetImageCount(), metadata, textureSubresources));
+        }
+
+        // シェーダーリソースビューの生成
+        {
+            // テクスチャバッファの生成
+            D3D12_RESOURCE_DESC textureDesc = {};
+            textureDesc.MipLevels = 1;
+            textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            textureDesc.Width = static_cast<UINT>(metadata.width);   // ★修正
+            textureDesc.Height = static_cast<UINT>(metadata.height); // ★修正
+            textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+            textureDesc.DepthOrArraySize = 1;
+            textureDesc.SampleDesc.Count = 1;
+            textureDesc.SampleDesc.Quality = 0;
+            textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+            auto textureHeapProp = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+            ThrowIfFailed(device_->CreateCommittedResource(
+                &textureHeapProp,
+                D3D12_HEAP_FLAG_NONE,
+                &textureDesc,
+                D3D12_RESOURCE_STATE_COPY_DEST,
+                nullptr,
+                IID_PPV_ARGS(textureBuffer_.ReleaseAndGetAddressOf())));
+            // シェーダーリソースビューの生成
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.Format = textureDesc.Format;
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Texture2D.MipLevels = 1;
+            device_->CreateShaderResourceView(textureBuffer_.Get(), &srvDesc, srvHeap_->GetCPUDescriptorHandleForHeapStart());
+        }
+
+
 	auto commandlist = DR->GetCommandList();
 	
     UpdateSubresources(commandlist, m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+
+
+
 }

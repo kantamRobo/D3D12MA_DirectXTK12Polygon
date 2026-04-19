@@ -6,6 +6,7 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
+#include "D3D12RaytracingSphere.h"
 
 
 // A basic game implementation that creates a D3D12 device and
@@ -61,6 +62,10 @@ private:
     // Rendering loop timer.
     DX::StepTimer                               m_timer;
 
-    // If using the DirectX Tool Kit for DX12, uncomment this line:
-    // std::unique_ptr<DirectX::GraphicsMemory> m_graphicsMemory;
+    // DirectX Raytracing sphere renderer.
+    D3D12RaytracingSphere                       m_raytracingSphere;
+
+    // Current window dimensions (tracked for resize events).
+    int m_windowWidth  = 800;
+    int m_windowHeight = 600;
 };

@@ -4,13 +4,12 @@
 
 #include "pch.h"
 #include "Game.h"
-#include "D3D12MAHelloTriangle.h"
+
 extern void ExitGame() noexcept;
 
 using namespace DirectX;
-
 using Microsoft::WRL::ComPtr;
-D3D12MAHelloTriangle renderer;
+
 Game::Game() noexcept(false)
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();
@@ -91,9 +90,10 @@ void Game::Render()
     auto commandList = m_deviceResources->GetCommandList();
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
-    // TODO: Add your rendering code here.
-    renderer.PopulateCommandList(m_deviceResources.get()
-    );    PIXEndEvent(commandList);
+    // Raytrace the sphere and copy output to the back buffer.
+    m_raytracingSphere.PopulateCommandList(m_deviceResources.get());
+
+    PIXEndEvent(commandList);
 
     // Show the new frame.
     PIXBeginEvent(PIX_COLOR_DEFAULT, L"Present");
@@ -166,12 +166,13 @@ void Game::OnDisplayChange()
 
 void Game::OnWindowSizeChanged(int width, int height)
 {
+    m_windowWidth  = width;
+    m_windowHeight = height;
+
     if (!m_deviceResources->WindowSizeChanged(width, height))
         return;
 
     CreateWindowSizeDependentResources();
-
-    // TODO: Game window is being resized.
 }
 
 // Properties
@@ -204,27 +205,32 @@ void Game::CreateDeviceDependentResources()
     // m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
     // TODO: Initialize device dependent objects here (independent of window size).
-    renderer.LoadAssets(m_deviceResources.get());
+    m_raytracingSphere.LoadAssets(m_deviceResources.get());
 }
 
 // Allocate all memory resources that change on a window SizeChanged event.
 void Game::CreateWindowSizeDependentResources()
 {
-    // TODO: Initialize windows-size dependent objects here.
+    auto outputSize = m_deviceResources->GetOutputSize();
+    UINT w = static_cast<UINT>(outputSize.right  - outputSize.left);
+    UINT h = static_cast<UINT>(outputSize.bottom - outputSize.top);
+    if (w == 0) w = static_cast<UINT>(m_windowWidth);
+    if (h == 0) h = static_cast<UINT>(m_windowHeight);
+
+    // Recreate the raytracing output texture at the new size.
+    m_deviceResources->WaitForGpu();
+    m_raytracingSphere.OnWindowSizeChanged(w, h, m_deviceResources.get());
 }
 
 void Game::OnDeviceLost()
 {
-    // TODO: Add Direct3D resource cleanup here.
-
-    // If using the DirectX Tool Kit for DX12, uncomment this line:
-    // m_graphicsMemory.reset();
+    // Release all device-dependent resources.
+    // The sphere renderer cleans up automatically via RAII (ComPtr + ~D3D12RaytracingSphere).
 }
 
 void Game::OnDeviceRestored()
 {
     CreateDeviceDependentResources();
-
     CreateWindowSizeDependentResources();
 }
 #pragma endregion

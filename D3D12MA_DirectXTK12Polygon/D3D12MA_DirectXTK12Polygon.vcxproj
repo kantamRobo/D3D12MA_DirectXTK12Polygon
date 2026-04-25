@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.props" Condition="Exists('..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -113,7 +114,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);C:\Users\hatte\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);C:\Users\hatte\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA\include;C:\Users\予備PC\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA\include;C:\Users\予備PC\source\repos\D3D12MA_DirectXTK12Polygon\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
@@ -126,7 +127,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3dcompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;uuid.lib;kernel32.lib;user32.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxcompiler.lib;dxil.lib;d3dcompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;uuid.lib;kernel32.lib;user32.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Users\予備PC\source\repos\D3D12MA_DirectXTK12Polygon\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -260,12 +262,15 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\directxtk12_desktop_win10.2025.7.10.1\build\native\directxtk12_desktop_win10.targets" Condition="Exists('..\packages\directxtk12_desktop_win10.2025.7.10.1\build\native\directxtk12_desktop_win10.targets')" />
+    <Import Project="..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets" Condition="Exists('..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets')" />
+    <Import Project="..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets" Condition="Exists('..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\directxtk12_desktop_win10.2025.7.10.1\build\native\directxtk12_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk12_desktop_win10.2025.7.10.1\build\native\directxtk12_desktop_win10.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets'))" />
+    <Error Condition="!Exists('..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets'))" />
   </Target>
 </Project>

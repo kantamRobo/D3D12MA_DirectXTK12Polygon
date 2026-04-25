@@ -157,3 +157,10 @@ inline void PIXEndEvent(T*) {}
 #include <pix.h>
 #endif
 
+#include <dxcapi.h> // DXC の COM インターフェース用
+
+// NOTE:
+// DXC のロード/初期化は `D3D12RaytracingSphere.cpp` の
+// `D3D12RaytracingSphere::CompileDXRShaderLibrary` で実施する。
+// `pch.h` には DXC のグローバル変数/初期化関数を置かない
+

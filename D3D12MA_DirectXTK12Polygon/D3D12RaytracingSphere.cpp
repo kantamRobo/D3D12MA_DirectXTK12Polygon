@@ -239,29 +239,21 @@ void D3D12RaytracingSphere::CompileDXRShaderLibrary(
             throw std::runtime_error("DxcCreateInstance not found in dxcompiler.dll.");
     }
 
-    // Create DXC library and compiler instances.
-    // CLSIDs defined locally to avoid linking against dxcguids.lib.
-    // Values match the stable definitions in dxcapi.h / Windows SDK.
-    // {6245D6AF-66E0-48FD-80B4-4D271796748C}
-    static const CLSID kCLSID_DxcLibrary  = {
-        0x6245d6af, 0x66e0, 0x48fd,
-        { 0x80, 0xb4, 0x4d, 0x27, 0x17, 0x96, 0x74, 0x8c } };
-    // {73E22D93-E6CE-47F3-B5BF-F0664F3914DF}
-    static const CLSID kCLSID_DxcCompiler = {
-        0x73e22d93, 0xe6ce, 0x47f3,
-        { 0xb5, 0xbf, 0xf0, 0x66, 0x4f, 0x39, 0x14, 0xdf } };
-
+    // Create DXC library and compiler instances using SDK-defined CLSIDs.
     ComPtr<IDxcLibrary> dxcLibrary;
-    DX::ThrowIfFailed(s_pfnCreate(kCLSID_DxcLibrary, IID_PPV_ARGS(&dxcLibrary)));
+    DX::ThrowIfFailed(s_pfnCreate(CLSID_DxcLibrary, IID_PPV_ARGS(&dxcLibrary)));
 
     ComPtr<IDxcCompiler> dxcCompiler;
-    DX::ThrowIfFailed(s_pfnCreate(kCLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler)));
+    DX::ThrowIfFailed(s_pfnCreate(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler)));
 
     // Load the HLSL source file.
     ComPtr<IDxcBlobEncoding> sourceBlob;
     DX::ThrowIfFailed(dxcLibrary->CreateBlobFromFile(shaderPath, nullptr, &sourceBlob));
 
     // Compile as a DXR shader library (lib_6_3).
+    ComPtr<IDxcIncludeHandler> includeHandler;
+    DX::ThrowIfFailed(dxcLibrary->CreateIncludeHandler(&includeHandler));
+
     ComPtr<IDxcOperationResult> result;
     DX::ThrowIfFailed(dxcCompiler->Compile(
         sourceBlob.Get(),
@@ -270,7 +262,7 @@ void D3D12RaytracingSphere::CompileDXRShaderLibrary(
         L"lib_6_3",  // DXR shader library target
         nullptr, 0,  // No extra compiler arguments
         nullptr, 0,  // No preprocessor defines
-        nullptr,     // No include handler (HLSL include resolved from working dir)
+        includeHandler.Get(),
         &result));
 
     HRESULT compileStatus = S_OK;
@@ -605,7 +597,7 @@ void D3D12RaytracingSphere::BuildAccelerationStructures(DX::DeviceResources* DR)
     tlasInputs.DescsLayout           = D3D12_ELEMENTS_LAYOUT_ARRAY;
     tlasInputs.Flags                 = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
     tlasInputs.NumDescs              = 1;
-    tlasInputs.pInstanceDescs        = m_tlasInstanceDescs->GetGPUVirtualAddress();
+    tlasInputs.InstanceDescs       = m_tlasInstanceDescs->GetGPUVirtualAddress();
     tlasInputs.Type                  = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO tlasPrebuild = {};
@@ -769,8 +761,8 @@ void D3D12RaytracingSphere::UpdateSceneConstants(DX::DeviceResources* DR)
     XMMATRIX proj     = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspectRatio, 0.1f, 1000.0f);
     XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 
-    // projectionToWorld = inverse(ViewProj) — used in the ray-gen shader.
-    m_sceneCBData.projectionToWorld = XMMatrixInverse(nullptr, viewProj);
+    // 重要: HLSL既定(column-major)に合わせて転置して渡す
+    m_sceneCBData.projectionToWorld = XMMatrixTranspose(XMMatrixInverse(nullptr, viewProj));
     m_sceneCBData.cameraPosition    = eye;
     m_sceneCBData.lightPosition     = XMVectorSet(3.0f, 5.0f, -3.0f, 1.0f);
     m_sceneCBData.lightAmbientColor = XMVectorSet(0.15f, 0.15f, 0.15f, 1.0f);

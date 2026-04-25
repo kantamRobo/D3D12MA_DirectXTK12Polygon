@@ -22,6 +22,8 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="D3D12MAHelloTriangle.h" />
+    <ClInclude Include="D3D12RaytracingSphere.h" />
+    <ClInclude Include="RaytracingSphereHlslCompat.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -32,6 +34,7 @@
     </ClCompile>
     <ClCompile Include="D3D12MAHelloTriangle.cpp" />
     <ClCompile Include="D3D12MemAlloc.cpp" />
+    <ClCompile Include="D3D12RaytracingSphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />
@@ -48,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="RaytracingSphere.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="VertexShader.hlsl" />

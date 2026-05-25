@@ -2,6 +2,13 @@
 // Integrates DirectX Raytracing (DXR) with DirectXTK12's GeometricPrimitive
 // to render a raytraced sphere using D3D12MA for geometry buffer allocation.
 
+
+
+//いや、一旦動くのを書いてから、別ブランチでヘルパーマシマシのコード書いたほうがよさそう
+
+
+//従って変えるのはAssimpから頂点データを引っ張って、それを頂点バッファにコピーする箇所かな
+//2026.5.25
 #include "pch.h"
 #include "D3D12RaytracingSphere.h"
 

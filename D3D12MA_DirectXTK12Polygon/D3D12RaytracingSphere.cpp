@@ -30,6 +30,86 @@ const wchar_t* D3D12RaytracingSphere::c_closestHitShaderName  = L"MyClosestHitSh
 const wchar_t* D3D12RaytracingSphere::c_missShaderName        = L"MyMissShader";
 const wchar_t* D3D12RaytracingSphere::c_hitGroupName          = L"MyHitGroup";
 
+
+
+bool Model::LoadModel(const char* path)
+{
+ 
+ 
+    vertices = GenerateVertices();
+    // スケール値を設定
+    float scaleFactor = 10.0f;
+ 
+ 
+    for (int i = 0; i < vertices.size(); i++)
+	{
+        //乗算　vertices[i].position = vertices[i].position,100.0f;
+	}
+ 
+ 
+    return true;
+}
+ 
+ 
+ 
+ 
+std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices()
+{
+	
+ 
+ 
+ 
+	std::vector< DirectX::VertexPositionNormalColorTexture> outvertices;
+	outvertices.clear();
+ 
+    for (unsigned int i = 0; i < m_scene->mNumMeshes; i++)
+	{
+        aiMesh* mesh = m_scene->mMeshes[i];
+ 
+ 
+ 
+        for (unsigned int j = 0; j < mesh->mNumVertices; j++)
+        {
+            DirectX::VertexPositionNormalColorTexture vertex = {};
+            aiVector3D pos = mesh->mVertices[j];
+ 
+ 
+            vertex.position = { pos.x , pos.y , pos.z };
+        	vertex.normal = { mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z };
+ 
+            if (mesh->mTextureCoords[0])
+            {
+            	vertex.textureCoordinate.x = mesh->mTextureCoords[0][j].x;
+            	vertex.textureCoordinate.y = mesh->mTextureCoords[0][j].y;
+            }
+            else
+            {
+            	vertex.textureCoordinate.x = 0.0f;
+            	vertex.textureCoordinate.y = 0.0f;
+            }
+ 
+            outvertices.push_back(vertex);
+        }
+ 
+        // インデックスの設定
+        for (unsigned int j = 0; j < mesh->mNumFaces; j++)
+        {
+            aiFace face = mesh->mFaces[j];
+            for (unsigned int k = 0; k < face.mNumIndices; k++)
+            {
+                indices.push_back(face.mIndices[k]);
+            }
+        }
+	}
+ 
+	
+ 
+    return outvertices;
+}
+ 
+Assi
+
+
 // ---------------------------------------------------------------------------
 // Destructor - release D3D12MA allocations
 // ---------------------------------------------------------------------------

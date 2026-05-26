@@ -10,6 +10,11 @@
 #include "D3D12MemAlloc.h"
 using namespace DirectX;
 
+// Convenience macro: size of obj in UINT32 units (rounded up).
+#define SizeOfInUint32(obj) ((sizeof(obj) - 1) / sizeof(UINT32) + 1)
+
+// Align value up to the given alignment (must be a power of two).
+#define ALIGN_UP(value, alignment) (((UINT64)(value) + (alignment) - 1) & ~((UINT64)(alignment) - 1))
 // Per-object constant buffer: material properties of the sphere.
 struct SphereConstantBuffer
 {

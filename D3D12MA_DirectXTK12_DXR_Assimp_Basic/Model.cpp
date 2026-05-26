@@ -79,6 +79,85 @@ std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices()
 }
 
 
+
+
+
+bool Model::LoadModel(const char* path)
+{
+
+
+    vertices = GenerateVertices();
+    // スケール値を設定
+    float scaleFactor = 10.0f;
+
+
+    for (int i = 0; i < vertices.size(); i++)
+    {
+        //乗算　vertices[i].position = vertices[i].position,100.0f;
+    }
+
+
+    return true;
+}
+
+
+
+
+std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices()
+{
+
+
+
+
+    std::vector< DirectX::VertexPositionNormalColorTexture> outvertices;
+    outvertices.clear();
+
+    for (unsigned int i = 0; i < m_scene->mNumMeshes; i++)
+    {
+        aiMesh* mesh = m_scene->mMeshes[i];
+
+
+
+        for (unsigned int j = 0; j < mesh->mNumVertices; j++)
+        {
+            DirectX::VertexPositionNormalColorTexture vertex = {};
+            aiVector3D pos = mesh->mVertices[j];
+
+
+            vertex.position = { pos.x , pos.y , pos.z };
+            vertex.normal = { mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z };
+
+            if (mesh->mTextureCoords[0])
+            {
+                vertex.textureCoordinate.x = mesh->mTextureCoords[0][j].x;
+                vertex.textureCoordinate.y = mesh->mTextureCoords[0][j].y;
+            }
+            else
+            {
+                vertex.textureCoordinate.x = 0.0f;
+                vertex.textureCoordinate.y = 0.0f;
+            }
+
+            outvertices.push_back(vertex);
+        }
+
+        // インデックスの設定
+        for (unsigned int j = 0; j < mesh->mNumFaces; j++)
+        {
+            aiFace face = mesh->mFaces[j];
+            for (unsigned int k = 0; k < face.mNumIndices; k++)
+            {
+                indices.push_back(face.mIndices[k]);
+            }
+        }
+    }
+
+
+
+    return outvertices;
+}
+
+
 void Model::BuildGeometry(DX::DeviceResources* DR)
 {
     auto device = DR->GetD3DDevice();
@@ -123,59 +202,58 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
         CD3DX12_RANGE readRange(0, 0);
         DX::ThrowIfFailed(m_indexBuffer->Map(0, &readRange, &pData));
         memcpy(pData, indices.data(), static_cast<size_t>(ibSize));
-        m_indexBuffer->Unmap(0, nu)llptr);
+        m_indexBuffer->Unmap(0, nullptr);
     }
 
 
-// Compile the shader library.
-std::vector<BYTE> dxilBlob;
-void* pBytecode = nullptr;
-SIZE_T bytecodeSize = 0;
-CompileDXRShaderLibrary(L"RaytracingSphere.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
+    // Compile the shader library.
+    std::vector<BYTE> dxilBlob;
+    void* pBytecode = nullptr;
+    SIZE_T bytecodeSize = 0;
+    CompileDXRShaderLibrary(L"RaytracingSphere.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
 
-// Build the RTPSO with 5 subobjects.
-CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+    // Build the RTPSO with 5 subobjects.
+    CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
 
-// 1. DXIL library
-{
-    auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-    D3D12_SHADER_BYTECODE libdxil = { pBytecode, bytecodeSize };
-    lib->SetDXILLibrary(&libdxil);
-    lib->DefineExport(c_raygenShaderName);
-    lib->DefineExport(c_closestHitShaderName);
-    lib->DefineExport(c_missShaderName);
-}
+    // 1. DXIL library
+    {
+        auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+        D3D12_SHADER_BYTECODE libdxil = { pBytecode, bytecodeSize };
+        lib->SetDXILLibrary(&libdxil);
+        lib->DefineExport(c_raygenShaderName);
+        lib->DefineExport(c_closestHitShaderName);
+        lib->DefineExport(c_missShaderName);
+    }
 
-// 2. Triangle hit group (closest-hit only)
-{
-    auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
-    hitGroup->SetClosestHitShaderImport(c_closestHitShaderName);
-    hitGroup->SetHitGroupExport(c_hitGroupName);
-    hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
-}
+    // 2. Triangle hit group (closest-hit only)
+    {
+        auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
+        hitGroup->SetClosestHitShaderImport(c_closestHitShaderName);
+        hitGroup->SetHitGroupExport(c_hitGroupName);
+        hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
+    }
 
-// 3. Shader config
-{
-    auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    UINT payloadSize = 4 * sizeof(float); // float4 color
-    UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
-    shaderConfig->Config(payloadSize, attributeSize);
-}
+    // 3. Shader config
+    {
+        auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+        UINT payloadSize = 4 * sizeof(float); // float4 color
+        UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
+        shaderConfig->Config(payloadSize, attributeSize);
+    }
 
-// 4. Global root signature
-{
-    auto globalRootSig = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-    globalRootSig->SetRootSignature(m_globalRootSignature.Get());
-}
+    // 4. Global root signature
+    {
+        auto globalRootSig = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+        globalRootSig->SetRootSignature(m_globalRootSignature.Get());
+    }
 
-// 5. Pipeline config (no secondary rays → max recursion = 1)
-{
-    auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-    pipelineConfig->Config(1);
-}
-
-DX::ThrowIfFailed(m_dxrDevice->CreateStateObject(
-    raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
+    // 5. Pipeline config (no secondary rays → max recursion = 1)
+    {
+        auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+        pipelineConfig->Config(1);
+    }
+    DX::ThrowIfFailed(m_dxrDevice->CreateStateObject(
+        raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
 }
 
 
@@ -379,7 +457,7 @@ pResults->GetStatus(&hrStatus);
 if (FAILED(hrStatus))
 {
     wprintf(L"Compilation Failed\n");
-    return 1;
+  
 }
 
 //
@@ -800,7 +878,7 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
     m_indexCount = static_cast<UINT>(dxtkIndices.size());
 
     // Strip texture coordinates: convert VertexPositionNormalTexture → Vertex.
-    std::vector<Vertex> vertices(m_vertexCount);
+    std::vector<DirectX::VertexPositionNormalColorTexture> vertices(m_vertexCount);
     for (UINT i = 0; i < m_vertexCount; ++i)
     {
         vertices[i].position = dxtkVertices[i].position;
@@ -809,7 +887,7 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
 
     // ----- Vertex buffer (D3D12MA UPLOAD heap) -----
     {
-        UINT64 vbSize = sizeof(Vertex) * m_vertexCount;
+        UINT64 vbSize = sizeof(DirectX::VertexPositionNormalColorTexture) * m_vertexCount;
         D3D12MA::CALLOCATION_DESC allocDesc(D3D12_HEAP_TYPE_UPLOAD,
             D3D12MA::ALLOCATION_FLAG_NONE);
         auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(vbSize);
@@ -916,7 +994,7 @@ void Model::BuildAccelerationStructures(DX::DeviceResources* DR)
     geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
     geometryDesc.Triangles.VertexCount = m_vertexCount;
     geometryDesc.Triangles.VertexBuffer.StartAddress = m_vertexBuffer->GetGPUVirtualAddress();
-    geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+    geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(DirectX::VertexPositionNormalColorTexture);
     geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS blasInputs = {};
@@ -1074,7 +1152,7 @@ void Model::CreateRaytracingOutputResource(DX::DeviceResources* DR)
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
         srvDesc.Format = DXGI_FORMAT_UNKNOWN;
         srvDesc.Buffer.NumElements = m_vertexCount;
-        srvDesc.Buffer.StructureByteStride = sizeof(Vertex);
+        srvDesc.Buffer.StructureByteStride = sizeof(DirectX::VertexPositionNormalColorTexture);
         srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
         device->CreateShaderResourceView(m_vertexBuffer.Get(), &srvDesc, srvCpu);
     }
@@ -1340,7 +1418,7 @@ void Model::CreateRaytracingOutputResource(DX::DeviceResources* DR)
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
         srvDesc.Format = DXGI_FORMAT_UNKNOWN;
         srvDesc.Buffer.NumElements = m_vertexCount;
-        srvDesc.Buffer.StructureByteStride = sizeof(Vertex);
+        srvDesc.Buffer.StructureByteStride = sizeof(DirectX::VertexPositionNormalColorTexture);
         srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
         device->CreateShaderResourceView(m_vertexBuffer.Get(), &srvDesc, srvCpu);
     }
@@ -1427,7 +1505,7 @@ void Model::CompileDXRShaderLibrary(
     if (FAILED(hrStatus))
     {
         wprintf(L"Compilation Failed\n");
-        return 1;
+        
     }
 
     //
@@ -1522,4 +1600,4 @@ void Model::CompileDXRShaderLibrary(
 
     }
 }
-}
+

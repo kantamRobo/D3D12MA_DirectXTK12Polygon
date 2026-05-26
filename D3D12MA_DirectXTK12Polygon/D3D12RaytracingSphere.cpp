@@ -12,8 +12,7 @@
 #include "pch.h"
 #include "D3D12RaytracingSphere.h"
 
-// DirectXTK12 geometry
-#include <GeometricPrimitive.h>
+
 
 // DXC shader compiler API (Windows SDK 10.0.17134+)
 // If your SDK is older, copy dxcapi.h from the DirectX Shader Compiler release.
@@ -116,12 +115,12 @@ void D3D12RaytracingSphere::LoadAssets(DX::DeviceResources* DR)
 
 
 
-しおり
+
 void D3D12RaytracingSphere::CompileDXRShaderLibrary(
     LPCWSTR shaderPath,
     void** ppBytecode,
     SIZE_T* pBytecodeSize,
-    std::vector<BYTE>& outBlob)
+    std::vector<BYTE>& outBlob){
     // 
     // Create compiler and utils.
     //

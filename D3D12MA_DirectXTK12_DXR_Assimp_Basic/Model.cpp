@@ -1227,7 +1227,7 @@ void Model::UpdateSceneConstants(DX::DeviceResources* DR)
 // ===========================================================================
 // DoRaytracing ? set state and dispatch rays.
 // ===========================================================================
-void Model::DoRaytracing(DX::DeviceResources* DR)
+void Model::Render(DX::DeviceResources* DR)
 {
     auto commandList = m_dxrCommandList.Get();
 

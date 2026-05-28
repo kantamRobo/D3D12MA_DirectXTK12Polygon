@@ -66,7 +66,6 @@ struct SceneConstantBuffer
 class Model
 {
 public:
-private:
 
     //assimp aiscene
 	aiScene* m_scene = nullptr;
@@ -150,7 +149,7 @@ private:
 	void CreateRaytracingOutputResource(DX::DeviceResources* DR);
 	void BuildShaderTables(ID3D12Device* device);
 	void UpdateSceneConstants(DX::DeviceResources* DR);
-    void DoRaytracing(DX::DeviceResources* DR);
+    void Render(DX::DeviceResources* DR);
     void CopyRaytracingOutputToBackbuffer(DX::DeviceResources* DR);
     // Allocate a descriptor from the heap; returns the heap index.
     UINT AllocateDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE* cpuDescriptor,

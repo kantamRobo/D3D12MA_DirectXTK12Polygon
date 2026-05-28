@@ -114,7 +114,8 @@ namespace DX
         Microsoft::WRL::ComPtr<IDXGISwapChain3>             m_swapChain;
         Microsoft::WRL::ComPtr<ID3D12Resource>              m_renderTargets[MAX_BACK_BUFFER_COUNT];
         Microsoft::WRL::ComPtr<ID3D12Resource>              m_depthStencil;
-
+    public:
+        Microsoft::WRL::ComPtr<IDXGIAdapter1>                adapter;
         // Presentation fence objects.
         Microsoft::WRL::ComPtr<ID3D12Fence>                 m_fence;
         UINT64                                              m_fenceValues[MAX_BACK_BUFFER_COUNT];

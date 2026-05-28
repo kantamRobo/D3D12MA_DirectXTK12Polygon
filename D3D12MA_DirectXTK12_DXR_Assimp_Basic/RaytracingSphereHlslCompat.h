@@ -5,13 +5,13 @@
 
 #ifdef HLSL
 
-#include <DirectXMath.h>
-#include <Windows.h>
+// Native HLSL types: float2, float3, float4, float4x4 are built-in.
 typedef float2   XMFLOAT2;
 typedef float3   XMFLOAT3;
 typedef float4   XMFLOAT4;
 typedef float4   XMVECTOR;
 typedef float4x4 XMMATRIX;
+
 #else
 using namespace DirectX;
 typedef UINT16 Index;

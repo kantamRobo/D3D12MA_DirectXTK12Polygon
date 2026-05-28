@@ -113,10 +113,6 @@ public:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_raytracingOutput;
     D3D12_GPU_DESCRIPTOR_HANDLE            m_raytracingOutputUAVGpuDescriptor = {};
     // Scene and sphere constant buffers (persistently mapped upload heap)
-    SceneConstantBuffer  m_sceneCBData = {};
-    SphereConstantBuffer m_sphereCBData = {};
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_sceneCBResource;
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_sphereCBResource;
     // Shader tables
     static const wchar_t* c_raygenShaderName;
     static const wchar_t* c_closestHitShaderName;
@@ -164,10 +160,6 @@ public:
     void OnWindowSizeChanged(UINT width, UINT height, DX::DeviceResources* DR);
     void CreateRaytracingInterfaces(DX::DeviceResources* DR);
     void LoadAssets(DX::DeviceResources* DR);
-    void CompileDXRShaderLibrary(
-        LPCWSTR shaderPath,
-        void** ppBytecode,
-        SIZE_T* pBytecodeSize,
-        std::vector<BYTE>& outBlob);
+    
 };
 

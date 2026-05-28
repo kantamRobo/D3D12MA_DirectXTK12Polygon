@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Model.h"
-
+#include <fstream>
 
 
 bool Model::LoadModel(const char* path)
@@ -563,7 +563,7 @@ void Model::PopulateCommandList(DX::DeviceResources* DR)
     UpdateSceneConstants(DR);
 
     // Dispatch rays into the output UAV.
-    DoRaytracing(DR);
+    Render(DR);
 
     // Copy raytracing result to the swap-chain back buffer.
     CopyRaytracingOutputToBackbuffer(DR);
@@ -748,14 +748,44 @@ void Model::CompileDXRShaderLibrary(
 //   4. Global root signature
 //   5. Pipeline config (max recursion = 1)
 // ===========================================================================
+void Model::LoadCompiledShaderLibrary(
+    LPCWSTR csoPath,
+    void** ppBytecode,
+    SIZE_T* pBytecodeSize,
+    std::vector<BYTE>& outBlob)
+{
+    std::ifstream file(csoPath, std::ios::binary | std::ios::ate);
+    if (!file)
+    {
+        throw std::runtime_error("Failed to open precompiled shader library .cso file.");
+    }
+
+    std::streamsize fileSize = file.tellg();
+    if (fileSize <= 0)
+    {
+        throw std::runtime_error("Invalid .cso file size.");
+    }
+
+    file.seekg(0, std::ios::beg);
+
+    outBlob.resize(static_cast<size_t>(fileSize));
+
+    if (!file.read(reinterpret_cast<char*>(outBlob.data()), fileSize))
+    {
+        throw std::runtime_error("Failed to read .cso file.");
+    }
+
+    *ppBytecode = outBlob.data();
+    *pBytecodeSize = outBlob.size();
+}
 void Model::CreateRaytracingPipelineStateObject(DX::DeviceResources* DR)
 {
-    // Compile the shader library.
+    // Load precompiled DXIL shader library.
     std::vector<BYTE> dxilBlob;
     void* pBytecode = nullptr;
     SIZE_T bytecodeSize = 0;
-    CompileDXRShaderLibrary(L"RaytracingSphere.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
 
+    LoadCompiledShaderLibrary(L"RaytracingSphere.cso", &pBytecode, &bytecodeSize, dxilBlob);
     // Build the RTPSO with 5 subobjects.
     CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
 

@@ -74,8 +74,7 @@ class Model
 public:
     ~Model();
     Model() {};
-    //assimp aiscene
-	aiScene* m_scene = nullptr;
+   
     // ---------------------------------------------------------------------------
 // Shader entry-point / hit-group names (must match RaytracingSphere.hlsl)
 // ---------------------------------------------------------------------------
@@ -139,9 +138,11 @@ public:
 	std::vector<VertexPositionNormalColorTexture> vertices;
     std::vector<uint16_t> indices;
     bool LoadModel(const char* path);
-	std::vector<DirectX::VertexPositionNormalColorTexture> GenerateVertices();
-	//Model.cpp‚Å’è‹`‚³‚ê‚½ŠÖ”‚ÌéŒ¾
+	
+    std::vector<DirectX::VertexPositionNormalColorTexture> GenerateVertices(const char* path);
+    //Model.cpp‚Å’è‹`‚³‚ê‚½ŠÖ”‚ÌéŒ¾
 	void BuildGeometry(DX::DeviceResources* DR);
+    void LoadAssets(DX::DeviceResources* DR, const char* filePath);
 	void CreateConstantBuffers(ID3D12Device* device);
     void LoadCompiledShaderLibrary(LPCWSTR csoPath, void** ppBytecode, SIZE_T* pBytecodeSize, std::vector<BYTE>& outBlob);
     void CreateRaytracingPipelineStateObject(DX::DeviceResources* DR);

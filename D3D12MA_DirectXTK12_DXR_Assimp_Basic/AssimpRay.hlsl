@@ -174,7 +174,7 @@ inline void GenerateCameraRay(
 // -----------------------------------------------------------------------------
 // Lighting
 // -----------------------------------------------------------------------------
-
+/*
 float4 CalculateDiffuseLighting(
     float3 hitPosition,
     float3 normal
@@ -190,7 +190,7 @@ float4 CalculateDiffuseLighting(
         * g_sceneCB.lightDiffuseColor
         * nDotL;
 }
-
+*/
 // -----------------------------------------------------------------------------
 // Ray Generation Shader
 // -----------------------------------------------------------------------------
@@ -263,14 +263,14 @@ void MyClosestHitShader(
 
     float3 triangleNormal =
         normalize(HitAttribute(vertexNormals, attr));
-
+/*
     float4 diffuseColor =
         CalculateDiffuseLighting(hitPosition, triangleNormal);
+*/
+    float4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-    float4 color =
-        g_sceneCB.lightAmbientColor + diffuseColor;
-
-    color.a = 1.0f;
+    
+    
 
     payload.color = color;
 }
@@ -282,6 +282,6 @@ void MyClosestHitShader(
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
-    // Background color
-    payload.color = float4(0.0f, 0.1f, 0.25f, 1.0f);
+    //ê‘êF
+    payload.color = float4(1.0f, 0.0f, 0.0f, 1.0f);
 }

@@ -205,7 +205,7 @@ void Game::CreateDeviceDependentResources()
 
     // TODO: Initialize device dependent objects here (independent of window size).
 	m_model = std::make_unique<Model>();
-	m_model->LoadAssets(m_deviceResources.get());
+	m_model->LoadAssets(m_deviceResources.get(), "Untitled.obj");
 
 }
 

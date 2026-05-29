@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Model.h"
 #include <fstream>
+#include <iostream>
 
 
 // D3D12RaytracingSphere.cpp
@@ -26,7 +27,7 @@ bool Model::LoadModel(const char* path)
 {
 
 
-    vertices = GenerateVertices();
+    vertices = GenerateVertices(path);
     // スケール値を設定
     float scaleFactor = 10.0f;
 
@@ -43,19 +44,37 @@ bool Model::LoadModel(const char* path)
 
 
 
-std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices()
+std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(const char* path)
 {
 
 
+	//aisceneの読み込み
+    Assimp::Importer importer;
 
+    const aiScene* scene = importer.ReadFile(
+        path,
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_GenSmoothNormals |
+        aiProcess_CalcTangentSpace |
+        aiProcess_ConvertToLeftHanded
+    );
+    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        std::cerr << "Assimp error: " << importer.GetErrorString() << std::endl;
+		//出力ウィンドウにエラーを表示
+		
+		OutputDebugStringA(importer.GetErrorString());
 
+        return {};
+	}
     std::vector< DirectX::VertexPositionNormalColorTexture> outvertices;
     outvertices.clear();
 
-    for (unsigned int i = 0; i < m_scene->mNumMeshes; i++)
+    for (unsigned int i = 0; i < scene->mNumMeshes; i++)
     {
-        aiMesh* mesh = m_scene->mMeshes[i];
-
+        aiMesh* mesh = scene->mMeshes[i];
+        
 
 
         for (unsigned int j = 0; j < mesh->mNumVertices; j++)
@@ -150,7 +169,7 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
     std::vector<BYTE> dxilBlob;
     void* pBytecode = nullptr;
     SIZE_T bytecodeSize = 0;
-    CompileDXRShaderLibrary(L"RaytracingSphere.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
+    CompileDXRShaderLibrary(L"AssimpRay.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
 
     // Build the RTPSO with 5 subobjects.
     CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
@@ -203,7 +222,7 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
 // ===========================================================================
 // LoadAssets ? one-time setup called from CreateDeviceDependentResources().
 // ===========================================================================
-void Model::LoadAssets(DX::DeviceResources* DR)
+void Model::LoadAssets(DX::DeviceResources* DR,const char* filePath)
 {
     auto device = DR->GetD3DDevice();
 
@@ -257,7 +276,7 @@ void Model::LoadAssets(DX::DeviceResources* DR)
 
     // Create constant buffers (scene and sphere material).
     CreateConstantBuffers(device);
-
+	LoadModel(filePath);
     // Generate sphere geometry and upload to GPU via D3D12MA.
     BuildGeometry(DR);
 

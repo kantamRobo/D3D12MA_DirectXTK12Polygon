@@ -326,8 +326,7 @@ void Game::Render()
     // Prepare the command list for DXR rendering.
     // この関数は Graphics Pipeline のバインドを行いません。
     m_deviceResources->Prepare();
-
-    auto commandList = m_deviceResources->GetCommandList();
+   auto commandList = m_deviceResources->GetCommandList();
 
     // イベント開始（デバッグ用）
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"DXR Render Frame");
@@ -343,6 +342,7 @@ void Game::Render()
     // Model が初期化されていない場合は何もしません。
     if (m_model)
     {
+		m_model->Render(m_deviceResources.get());//人の手による手動で追加
         m_model->PopulateCommandList(m_deviceResources.get());
     }
 

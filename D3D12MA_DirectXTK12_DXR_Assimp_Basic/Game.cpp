@@ -1,7 +1,7 @@
 //
 // Game.cpp
 //
-
+/*
 #include "pch.h"
 #include "Game.h"
 
@@ -10,7 +10,8 @@ extern void ExitGame() noexcept;
 using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
-
+*/
+/*
 Game::Game() noexcept(false)
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();
@@ -28,7 +29,9 @@ Game::~Game()
         m_deviceResources->WaitForGpu();
     }
 }
+*/
 
+/*
 // Initialize the Direct3D resources required to run.
 void Game::Initialize(HWND window, int width, int height)
 {
@@ -45,9 +48,10 @@ void Game::Initialize(HWND window, int width, int height)
     /*
     m_timer.SetFixedTimeStep(true);
     m_timer.SetTargetElapsedSeconds(1.0 / 60);
-    */
+    
 }
-
+*/
+/*
 #pragma region Frame Update
 // Executes the basic game loop.
 void Game::Tick()
@@ -59,7 +63,8 @@ void Game::Tick()
 
     Render();
 }
-
+*/
+/*
 // Updates the world.
 void Game::Update(DX::StepTimer const& timer)
 {
@@ -72,8 +77,9 @@ void Game::Update(DX::StepTimer const& timer)
 
     PIXEndEvent();
 }
+*/
 #pragma endregion
-
+/*
 #pragma region Frame Render
 // Draws the scene.
 void Game::Render()
@@ -114,7 +120,9 @@ void Game::Render()
 
     PIXEndEvent();
 }
+*/
 
+/*
 // Helper method to clear the back buffers.
 void Game::Clear()
 {
@@ -130,7 +138,9 @@ void Game::Clear()
     PIXEndEvent(commandList);
 }
 #pragma endregion
+*/
 
+/*
 #pragma region Message Handlers
 // Message handlers
 void Game::OnActivated()
@@ -237,5 +247,129 @@ void Game::OnDeviceRestored()
     CreateDeviceDependentResources();
 
     CreateWindowSizeDependentResources();
+}
+#pragma endregion
+*/
+
+# pragma region QWEMN3_59B_RTX30508GB
+
+//
+// Game.cpp (修正版)
+//
+
+#include "pch.h"
+#include "Game.h"
+#include "Model.h" // Model が必要なので Include
+#include <DirectXMath.h>
+
+//extern void ExitGame() noexcept;
+
+using namespace DirectX;
+
+using Microsoft::WRL::ComPtr;
+
+Game::Game() noexcept(false)
+{
+    m_deviceResources = std::make_unique<DX::DeviceResources>();
+
+    // 重要: DXR は通常、Direct3D 12 のバックバッファと同じ解像度で出力されます。
+    // Model.h に VertexPositionNormalColorTexture などがあります。
+}
+
+Game::~Game()
+{
+    if (m_deviceResources)
+    {
+        m_deviceResources->WaitForGpu();
+    }
+}
+
+// Initialize the Direct3D resources required to run.
+void Game::Initialize(HWND window, int width, int height)
+{
+    m_deviceResources->SetWindow(window, width, height);
+
+    m_deviceResources->CreateDeviceResources();
+    // DeviceDependentResources 作成時に Model をロード
+    //CreateDeviceDependentResources();
+
+    m_deviceResources->CreateWindowSizeDependentResources();
+}
+
+#pragma region Frame Update
+void Game::Tick()
+{
+    m_timer.Tick([&]()
+        {
+            Update(m_timer);
+        });
+
+    Render(); // ここが描画の入口
+}
+
+void Game::Update(DX::StepTimer const& timer)
+{
+    // TODO: Add your game logic here.
+}
+#pragma endregion
+
+#pragma region Frame Render
+// Draws the scene using DirectX Raytracing (DXR).
+void Game::Render()
+{
+    // Don't try to render anything before the first Update.
+    if (m_timer.GetFrameCount() == 0)
+    {
+        return;
+    }
+
+    // Prepare the command list for DXR rendering.
+    // この関数は Graphics Pipeline のバインドを行いません。
+    m_deviceResources->Prepare();
+
+    auto commandList = m_deviceResources->GetCommandList();
+
+    // イベント開始（デバッグ用）
+    PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"DXR Render Frame");
+
+    // 【修正ポイント 1】グラフィックスパイプラインのバインド（ClearRenderTargetView など）は不要です。
+    // DirectX Raytracing API だけを呼び出します。
+
+    // Model の PopulateCommandList メソッドで、以下の処理が内部で行われます：
+    // 1. Scene Constants の更新 (UpdateSceneConstants)
+    // 2. レイトレーシングの実行 (Render -> DispatchRays)
+    // 3. レイ結果のコピー (CopyRaytracingOutputToBackbuffer)
+
+    // Model が初期化されていない場合は何もしません。
+    if (m_model)
+    {
+        m_model->PopulateCommandList(m_deviceResources.get());
+    }
+
+    PIXEndEvent(commandList);
+
+    // Show the new frame.
+    PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Present");
+    m_deviceResources->Present();
+    PIXEndEvent();
+}
+
+// Helper method (旧機能のため参照用だが、現在は不要かもしれません)
+void Game::Clear()
+{
+    // 【修正ポイント 2】DXR レンダリングフローでは、バックバッファを「グラフィックスパイプラインを使ってクリア」するのではなく、
+    // 「レイトレーシング結果のコピー」がメインです。
+    // もし何らかの原因で初期化が必要な場合は、Model::PopulateCommandList の内部で行われるバリアrier処理に任せるのが標準的です。
+    // あるいは、単純に Color でクリアしたい場合でも、Graphics Pipeline を通さずに Resource Barrier だけで行うことができますが、
+    // DXR の実装（上記 Model.cpp）では CopyResource だけがメインなので、この関数は必要ありません。
+
+    // Model.cpp の PopulateCommandList -> CopyRaytracingOutputToBackbuffer で以下の処理が行われます:
+    // 1. BackBuffer (RENDER_TARGET -> COPY_DEST) の遷移
+    // 2. Raytracing Output (UNORDERED_ACCESS -> COPY_SOURCE) の遷移
+    // 3. コピー実行
+    // 4. バックバッファの戻り遷移 (COPY_DEST -> RENDER_TARGET)
+
+    // ※もし画面が真っ暗（未初期化）になる場合、PopulateCommandList の直後に単純なクリアを入れることもありますが、
+    // モデル側のロジック（Model.cpp の CreateRaytracingOutputResource など）に任せている前提です。
 }
 #pragma endregion

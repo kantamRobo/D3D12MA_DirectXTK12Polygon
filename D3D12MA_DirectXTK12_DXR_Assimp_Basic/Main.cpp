@@ -1,7 +1,52 @@
 //
 // Main.cpp
 //
+/*
+g_game->GetDefaultSize(w, h);
+ // game->OnDisplayChange();
+ // game->OnWindowMoved();
+  //  game->OnResuming();
+   //game->OnWindowSizeChanged(LOWORD(lParam), HIWORD(lParam));
 
+            //game->OnWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
+            game->OnActivated();
+             case WM_ACTIVATEAPP:
+        if (game)
+        {
+            if (wParam)
+            {
+               // game->OnActivated();
+            }
+            else
+            {
+                //game->OnDeactivated();
+            }
+        }
+         case WM_POWERBROADCAST:
+        switch (wParam)
+        {
+        case PBT_APMQUERYSUSPEND:
+            if (!s_in_suspend && game)
+                game->OnSuspending();
+            s_in_suspend = true;
+            return TRUE;
+
+        case PBT_APMRESUMESUSPEND:
+            if (!s_minimized)
+            {
+                if (s_in_suspend && game)
+                    game->OnResuming();
+                s_in_suspend = false;
+            }
+            return TRUE;
+
+        default:
+            break;
+        }
+        break;
+
+        game->GetDefaultSize(width, height);
+*/
 #include "pch.h"
 #include "Game.h"
 
@@ -70,7 +115,11 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
         // Create window
         int w, h;
-        g_game->GetDefaultSize(w, h);
+       // g_game->GetDefaultSize(w, h);
+		//Qwen 3.5 9B No thinking LM Studio 2026-05-30検証後はGetDefaultSizeを呼び出すようにしておくか、
+        //別ブランチとしてこのコミットを保存する
+		w = 800; // TODO: Change to desired default window width.
+		h = 600; // TODO: Change to desired default window height.
 
         RECT rc = { 0, 0, static_cast<LONG>(w), static_cast<LONG>(h) };
 
@@ -151,14 +200,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DISPLAYCHANGE:
         if (game)
         {
-            game->OnDisplayChange();
+           // game->OnDisplayChange();
         }
         break;
 
     case WM_MOVE:
         if (game)
         {
-            game->OnWindowMoved();
+           // game->OnWindowMoved();
         }
         break;
 
@@ -169,7 +218,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 s_minimized = true;
                 if (!s_in_suspend && game)
-                    game->OnSuspending();
+                  //  game->OnSuspending();
                 s_in_suspend = true;
             }
         }
@@ -177,12 +226,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             s_minimized = false;
             if (s_in_suspend && game)
-                game->OnResuming();
+              //  game->OnResuming();
             s_in_suspend = false;
         }
         else if (!s_in_sizemove && game)
         {
-            game->OnWindowSizeChanged(LOWORD(lParam), HIWORD(lParam));
+            //game->OnWindowSizeChanged(LOWORD(lParam), HIWORD(lParam));
         }
         break;
 
@@ -197,7 +246,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             RECT rc;
             GetClientRect(hWnd, &rc);
 
-            game->OnWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
+            //game->OnWindowSizeChanged(rc.right - rc.left, rc.bottom - rc.top);
         }
         break;
 
@@ -215,11 +264,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (wParam)
             {
-                game->OnActivated();
+               // game->OnActivated();
             }
             else
             {
-                game->OnDeactivated();
+                //game->OnDeactivated();
             }
         }
         break;
@@ -229,7 +278,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
         case PBT_APMQUERYSUSPEND:
             if (!s_in_suspend && game)
-                game->OnSuspending();
+               // game->OnSuspending();
             s_in_suspend = true;
             return TRUE;
 
@@ -237,7 +286,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (!s_minimized)
             {
                 if (s_in_suspend && game)
-                    game->OnResuming();
+                 //   game->OnResuming();
                 s_in_suspend = false;
             }
             return TRUE;
@@ -263,7 +312,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 int width = 800;
                 int height = 600;
                 if (game)
-                    game->GetDefaultSize(width, height);
+                    //game->GetDefaultSize(width, height);
 
                 ShowWindow(hWnd, SW_SHOWNORMAL);
 

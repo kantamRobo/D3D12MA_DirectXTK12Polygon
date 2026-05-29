@@ -9,9 +9,10 @@
 // to render a raytraced sphere using D3D12MA for geometry buffer allocation.
 using namespace DirectX;
 using namespace Microsoft::WRL;
-
-
-
+//Qwen3.5 9Bの検証後は
+//game.h
+//main.cppのコメントアウトした部分は検証後元の形に戻しておく
+// 
 // ---------------------------------------------------------------------------
 // Destructor - release D3D12MA allocations
 // ---------------------------------------------------------------------------

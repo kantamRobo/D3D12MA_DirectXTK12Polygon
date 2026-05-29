@@ -8,11 +8,12 @@
 #include "StepTimer.h"
 
 #include <memory>
-
+//Qwen3.5 9BÇÃåüèÿå„ÇÕDX::IDeviceNotifyÇåpè≥Ç≥ÇπÇƒÇ®Ç≠
 #include "Model.h"
 // A basic game implementation that creates a D3D12 device and
 // provides a game loop.
-class Game final : public DX::IDeviceNotify
+class Game 
+	// final : public DX::IDeviceNotify
 {
 public:
 
@@ -30,12 +31,16 @@ public:
 
     // Basic game loop
     void Tick();
-
+#pragma region GPT5.5-Thinking
+/*
     // IDeviceNotify
     void OnDeviceLost() override;
     void OnDeviceRestored() override;
-
+    */
+#pragma endregion
     // Messages
+#pragma region GPT5.5-Thinking
+    /*
     void OnActivated();
     void OnDeactivated();
     void OnSuspending();
@@ -46,17 +51,19 @@ public:
 
     // Properties
     void GetDefaultSize( int& width, int& height ) const noexcept;
-
+    */
+#pragma endregion
 private:
 
     void Update(DX::StepTimer const& timer);
     void Render();
 
     void Clear();
-
+#pragma region GPT5.5-Thinking
+    /*
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
-
+     */
     // Device resources.
     std::unique_ptr<DX::DeviceResources>        m_deviceResources;
 	std::unique_ptr<Model>                       m_model;

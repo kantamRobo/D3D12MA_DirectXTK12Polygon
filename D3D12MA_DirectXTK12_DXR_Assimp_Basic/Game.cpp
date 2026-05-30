@@ -10,7 +10,7 @@ extern void ExitGame() noexcept;
 using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
-
+//
 Game::Game() noexcept(false)
 {
     m_deviceResources = std::make_unique<DX::DeviceResources>();

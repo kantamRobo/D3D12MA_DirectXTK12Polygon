@@ -53,9 +53,9 @@ void Game::Initialize(HWND window, int width, int height)
 void Game::Tick()
 {
     m_timer.Tick([&]()
-    {
-        Update(m_timer);
-    });
+        {
+            Update(m_timer);
+        });
 
     Render();
 }
@@ -86,13 +86,23 @@ void Game::Render()
 
     // Prepare the command list to render a new frame.
     m_deviceResources->Prepare();
+
+    // Keep the back buffer in RENDER_TARGET state before Model::CopyRaytracingOutputToBackbuffer().
+    // Do not bind the old graphics pipeline state here; DXR only needs the command list open.
     Clear();
 
     auto commandList = m_deviceResources->GetCommandList();
-    PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
+    PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"DXR Render");
 
-    // TODO: Add your rendering code here.
-	m_model->Render(m_deviceResources.get());
+    // DXR frame path:
+    //   1. update camera/light constants
+    //   2. DispatchRays into the UAV output texture
+    //   3. copy the UAV output texture to the swap-chain back buffer
+    if (m_model)
+    {
+        m_model->PopulateCommandList(m_deviceResources.get());
+    }
+
     PIXEndEvent(commandList);
 
     // Show the new frame.
@@ -111,19 +121,11 @@ void Game::Clear()
     auto commandList = m_deviceResources->GetCommandList();
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Clear");
 
-    // Clear the views.
+    // Clear only the back buffer.
+    // OMSetRenderTargets / RSSetViewports / RSSetScissorRects are for the graphics pipeline
+    // and are intentionally not used by this DXR-only frame path.
     const auto rtvDescriptor = m_deviceResources->GetRenderTargetView();
-    const auto dsvDescriptor = m_deviceResources->GetDepthStencilView();
-
-    commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, &dsvDescriptor);
     commandList->ClearRenderTargetView(rtvDescriptor, Colors::CornflowerBlue, 0, nullptr);
-    commandList->ClearDepthStencilView(dsvDescriptor, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-    // Set the viewport and scissor rect.
-    const auto viewport = m_deviceResources->GetScreenViewport();
-    const auto scissorRect = m_deviceResources->GetScissorRect();
-    commandList->RSSetViewports(1, &viewport);
-    commandList->RSSetScissorRects(1, &scissorRect);
 
     PIXEndEvent(commandList);
 }
@@ -171,7 +173,13 @@ void Game::OnWindowSizeChanged(int width, int height)
 
     CreateWindowSizeDependentResources();
 
-    // TODO: Game window is being resized.
+    if (m_model)
+    {
+        m_model->OnWindowSizeChanged(
+            static_cast<UINT>(width),
+            static_cast<UINT>(height),
+            m_deviceResources.get());
+    }
 }
 
 // Properties
@@ -204,8 +212,8 @@ void Game::CreateDeviceDependentResources()
     // m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
 
     // TODO: Initialize device dependent objects here (independent of window size).
-	m_model = std::make_unique<Model>();
-	m_model->LoadAssets(m_deviceResources.get());
+    m_model = std::make_unique<Model>();
+    m_model->LoadAssets(m_deviceResources.get(), "Untitled.obj");
 
 }
 
@@ -217,7 +225,8 @@ void Game::CreateWindowSizeDependentResources()
 
 void Game::OnDeviceLost()
 {
-    // TODO: Add Direct3D resource cleanup here.
+    // Release DXR resources before DeviceResources recreates the D3D12 device.
+    m_model.reset();
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     // m_graphicsMemory.reset();

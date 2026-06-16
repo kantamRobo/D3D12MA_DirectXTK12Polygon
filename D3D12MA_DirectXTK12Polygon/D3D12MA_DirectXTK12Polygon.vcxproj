@@ -263,7 +263,8 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets" Condition="Exists('..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets')" />
-    <Import Project="..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets" Condition="Exists('..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets')" />
+    <Import Project="..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets" Condition="Exists('..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" />
+    <Import Project="..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets" Condition="Exists('..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -271,6 +272,7 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.props'))" />
     <Error Condition="!Exists('..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\Microsoft.Direct3D.DXC.targets'))" />
-    <Error Condition="!Exists('..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk12_desktop_win10.2026.4.1.1\build\native\directxtk12_desktop_win10.targets'))" />
+    <Error Condition="!Exists('..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtex_desktop_win10.2026.5.8.1\build\native\directxtex_desktop_win10.targets'))" />
+    <Error Condition="!Exists('..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets'))" />
   </Target>
 </Project>

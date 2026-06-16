@@ -1,13 +1,33 @@
 #include "pch.h"
 #include "Model.h"
 #include <fstream>
+#include <iostream>
+
+
+// D3D12RaytracingSphere.cpp
+// Integrates DirectX Raytracing (DXR) with DirectXTK12's GeometricPrimitive
+// to render a raytraced sphere using D3D12MA for geometry buffer allocation.
+using namespace DirectX;
+using namespace Microsoft::WRL;
+
+
+
+// ---------------------------------------------------------------------------
+// Destructor - release D3D12MA allocations
+// ---------------------------------------------------------------------------
+Model::~Model()
+{
+    if (m_vertexAllocation) { m_vertexAllocation->Release(); m_vertexAllocation = nullptr; }
+    if (m_indexAllocation) { m_indexAllocation->Release();  m_indexAllocation = nullptr; }
+    if (m_allocator) { m_allocator->Release();        m_allocator = nullptr; }
+}
 
 
 bool Model::LoadModel(const char* path)
 {
 
 
-    vertices = GenerateVertices();
+    vertices = GenerateVertices(path);
     // スケール値を設定
     float scaleFactor = 10.0f;
 
@@ -24,98 +44,37 @@ bool Model::LoadModel(const char* path)
 
 
 
-std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices()
+std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(const char* path)
 {
 
 
+	//aisceneの読み込み
+    Assimp::Importer importer;
 
+    const aiScene* scene = importer.ReadFile(
+        path,
+        aiProcess_Triangulate |
+        aiProcess_JoinIdenticalVertices |
+        aiProcess_GenSmoothNormals |
+        aiProcess_CalcTangentSpace |
+        aiProcess_ConvertToLeftHanded
+    );
+    if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+    {
+        std::cerr << "Assimp error: " << importer.GetErrorString() << std::endl;
+		//出力ウィンドウにエラーを表示
+		
+		OutputDebugStringA(importer.GetErrorString());
 
+        return {};
+	}
     std::vector< DirectX::VertexPositionNormalColorTexture> outvertices;
     outvertices.clear();
 
-    for (unsigned int i = 0; i < m_scene->mNumMeshes; i++)
+    for (unsigned int i = 0; i < scene->mNumMeshes; i++)
     {
-        aiMesh* mesh = m_scene->mMeshes[i];
-
-
-
-        for (unsigned int j = 0; j < mesh->mNumVertices; j++)
-        {
-            DirectX::VertexPositionNormalColorTexture vertex = {};
-            aiVector3D pos = mesh->mVertices[j];
-
-
-            vertex.position = { pos.x , pos.y , pos.z };
-            vertex.normal = { mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z };
-
-            if (mesh->mTextureCoords[0])
-            {
-                vertex.textureCoordinate.x = mesh->mTextureCoords[0][j].x;
-                vertex.textureCoordinate.y = mesh->mTextureCoords[0][j].y;
-            }
-            else
-            {
-                vertex.textureCoordinate.x = 0.0f;
-                vertex.textureCoordinate.y = 0.0f;
-            }
-
-            outvertices.push_back(vertex);
-        }
-
-        // インデックスの設定
-        for (unsigned int j = 0; j < mesh->mNumFaces; j++)
-        {
-            aiFace face = mesh->mFaces[j];
-            for (unsigned int k = 0; k < face.mNumIndices; k++)
-            {
-                indices.push_back(face.mIndices[k]);
-            }
-        }
-    }
-
-
-
-    return outvertices;
-}
-
-
-
-
-
-bool Model::LoadModel(const char* path)
-{
-
-
-    vertices = GenerateVertices();
-    // スケール値を設定
-    float scaleFactor = 10.0f;
-
-
-    for (int i = 0; i < vertices.size(); i++)
-    {
-        //乗算　vertices[i].position = vertices[i].position,100.0f;
-    }
-
-
-    return true;
-}
-
-
-
-
-std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices()
-{
-
-
-
-
-    std::vector< DirectX::VertexPositionNormalColorTexture> outvertices;
-    outvertices.clear();
-
-    for (unsigned int i = 0; i < m_scene->mNumMeshes; i++)
-    {
-        aiMesh* mesh = m_scene->mMeshes[i];
-
+        aiMesh* mesh = scene->mMeshes[i];
+        
 
 
         for (unsigned int j = 0; j < mesh->mNumVertices; j++)
@@ -210,7 +169,7 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
     std::vector<BYTE> dxilBlob;
     void* pBytecode = nullptr;
     SIZE_T bytecodeSize = 0;
-    CompileDXRShaderLibrary(L"RaytracingSphere.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
+    CompileDXRShaderLibrary(L"AssimpRay.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
 
     // Build the RTPSO with 5 subobjects.
     CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
@@ -258,53 +217,12 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
 
 
 
-// D3D12RaytracingSphere.cpp
-// Integrates DirectX Raytracing (DXR) with DirectXTK12's GeometricPrimitive
-// to render a raytraced sphere using D3D12MA for geometry buffer allocation.
 
-
-
-//いや、一旦動くのを書いてから、別ブランチでヘルパーマシマシのコード書いたほうがよさそう
-
-
-//従って変えるのはAssimpから頂点データを引っ張って、それを頂点バッファにコピーする箇所かな
-//2026.5.25
-#include "pch.h"
-#include "Model.h"
-
-// DirectXTK12 geometry
-#include <GeometricPrimitive.h>
-
-// DXC shader compiler API (Windows SDK 10.0.17134+)
-// If your SDK is older, copy dxcapi.h from the DirectX Shader Compiler release.
-#include <atlbase.h>        // Common COM helpers.
-#include <dxcapi.h>         // Be sure to link with dxcompiler.lib.
-#include <d3d12shader.h>    // Shader reflection.
-using namespace DirectX;
-using namespace Microsoft::WRL;
-
-// ---------------------------------------------------------------------------
-// Shader entry-point / hit-group names (must match RaytracingSphere.hlsl)
-// ---------------------------------------------------------------------------
-const wchar_t* Model::c_raygenShaderName = L"MyRaygenShader";
-const wchar_t* Model::c_closestHitShaderName = L"MyClosestHitShader";
-const wchar_t* Model::c_missShaderName = L"MyMissShader";
-const wchar_t* Model::c_hitGroupName = L"MyHitGroup";
-
-// ---------------------------------------------------------------------------
-// Destructor - release D3D12MA allocations
-// ---------------------------------------------------------------------------
-Model::~Model()
-{
-    if (m_vertexAllocation) { m_vertexAllocation->Release(); m_vertexAllocation = nullptr; }
-    if (m_indexAllocation) { m_indexAllocation->Release();  m_indexAllocation = nullptr; }
-    if (m_allocator) { m_allocator->Release();        m_allocator = nullptr; }
-}
 
 // ===========================================================================
 // LoadAssets ? one-time setup called from CreateDeviceDependentResources().
 // ===========================================================================
-void Model::LoadAssets(DX::DeviceResources* DR)
+void Model::LoadAssets(DX::DeviceResources* DR,const char* filePath)
 {
     auto device = DR->GetD3DDevice();
 
@@ -358,7 +276,7 @@ void Model::LoadAssets(DX::DeviceResources* DR)
 
     // Create constant buffers (scene and sphere material).
     CreateConstantBuffers(device);
-
+	LoadModel(filePath);
     // Generate sphere geometry and upload to GPU via D3D12MA.
     BuildGeometry(DR);
 
@@ -375,183 +293,6 @@ void Model::LoadAssets(DX::DeviceResources* DR)
 
 
 
-
-void Model::CompileDXRShaderLibrary(
-    LPCWSTR shaderPath,
-    void** ppBytecode,
-    SIZE_T* pBytecodeSize,
-    std::vector<BYTE>& outBlob){
-    // 
-    // Create compiler and utils.
-    //
-    CComPtr<IDxcUtils> pUtils;
-CComPtr<IDxcCompiler3> pCompiler;
-DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
-DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
-
-//
-// Create default include handler. (You can create your own...)
-//
-CComPtr<IDxcIncludeHandler> pIncludeHandler;
-pUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
-
-
-//
-// COMMAND LINE:
-// dxc myshader.hlsl -E main -T ps_6_0 -Zi -D MYDEFINE=1 -Fo myshader.bin -Fd myshader.pdb -Qstrip_reflect
-//
-LPCWSTR pszArgs[] =
-{
-    L"myshader.hlsl",            // Optional shader source file name for error reporting
-    // and for PIX shader source view.  
-L"-E", L"main",              // Entry point.
-L"-T", L"ps_6_0",            // Target.
-L"-Zs",                      // Enable debug information (slim format)
-L"-D", L"MYDEFINE=1",        // A single define.
-L"-Fo", L"myshader.bin",     // Optional. Stored in the pdb. 
-L"-Fd", L"myshader.pdb",     // The file name of the pdb. This must either be supplied
-// or the autogenerated file name must be used.
-L"-Qstrip_reflect",          // Strip reflection into a separate blob. 
-};
-
-
-//
-// Open source file.  
-//
-CComPtr<IDxcBlobEncoding> pSource = nullptr;
-pUtils->LoadFile(L"myshader.hlsl", nullptr, &pSource);
-DxcBuffer Source;
-Source.Ptr = pSource->GetBufferPointer();
-Source.Size = pSource->GetBufferSize();
-Source.Encoding = DXC_CP_ACP; // Assume BOM says UTF8 or UTF16 or this is ANSI text.
-
-
-//
-// Compile it with specified arguments.
-//
-CComPtr<IDxcResult> pResults;
-pCompiler->Compile(
-    &Source,                // Source buffer.
-    pszArgs,                // Array of pointers to arguments.
-    _countof(pszArgs),      // Number of arguments.
-    pIncludeHandler,        // User-provided interface to handle #include directives (optional).
-    IID_PPV_ARGS(&pResults) // Compiler output status, buffer, and errors.
-);
-
-//
-// Print errors if present.
-//
-CComPtr<IDxcBlobUtf8> pErrors = nullptr;
-pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
-// Note that d3dcompiler would return null if no errors or warnings are present.
-// IDxcCompiler3::Compile will always return an error buffer, but its length
-// will be zero if there are no warnings or errors.
-if (pErrors != nullptr && pErrors->GetStringLength() != 0)
-wprintf(L"Warnings and Errors:\n%S\n", pErrors->GetStringPointer());
-
-//
-// Quit if the compilation failed.
-//
-HRESULT hrStatus;
-pResults->GetStatus(&hrStatus);
-if (FAILED(hrStatus))
-{
-    wprintf(L"Compilation Failed\n");
-  
-}
-
-//
-// Save shader binary.
-//
-CComPtr<IDxcBlob> pShader = nullptr;
-CComPtr<IDxcBlobUtf16> pShaderName = nullptr;
-pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pShader), &pShaderName);
-if (pShader != nullptr)
-{
-    FILE* fp = NULL;
-
-    _wfopen_s(&fp, pShaderName->GetStringPointer(), L"wb");
-    fwrite(pShader->GetBufferPointer(), pShader->GetBufferSize(), 1, fp);
-    fclose(fp);
-}
-
-//
-// Save pdb.
-//
-CComPtr<IDxcBlob> pPDB = nullptr;
-CComPtr<IDxcBlobUtf16> pPDBName = nullptr;
-pResults->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pPDB), &pPDBName);
-{
-    FILE* fp = NULL;
-
-    // Note that if you don't specify -Fd, a pdb name will be automatically generated.
-    // Use this file name to save the pdb so that PIX can find it quickly.
-    _wfopen_s(&fp, pPDBName->GetStringPointer(), L"wb");
-    fwrite(pPDB->GetBufferPointer(), pPDB->GetBufferSize(), 1, fp);
-    fclose(fp);
-}
-
-//
-// Print hash.
-//
-CComPtr<IDxcBlob> pHash = nullptr;
-pResults->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&pHash), nullptr);
-if (pHash != nullptr)
-{
-    wprintf(L"Hash: ");
-    DxcShaderHash* pHashBuf = (DxcShaderHash*)pHash->GetBufferPointer();
-    for (int i = 0; i < _countof(pHashBuf->HashDigest); i++)
-        wprintf(L"%.2x", pHashBuf->HashDigest[i]);
-    wprintf(L"\n");
-}
-
-//
-// Demonstrate getting the hash from the PDB blob using the IDxcUtils::GetPDBContents API
-//
-CComPtr<IDxcBlob> pHashDigestBlob = nullptr;
-CComPtr<IDxcBlob> pDebugDxilContainer = nullptr;
-if (SUCCEEDED(pUtils->GetPDBContents(pPDB, &pHashDigestBlob, &pDebugDxilContainer)))
-{
-    // This API returns the raw hash digest, rather than a DxcShaderHash structure.
-    // This will be the same as the DxcShaderHash::HashDigest returned from
-    // IDxcResult::GetOutput(DXC_OUT_SHADER_HASH, ...).
-    wprintf(L"Hash from PDB: ");
-    const BYTE* pHashDigest = (const BYTE*)pHashDigestBlob->GetBufferPointer();
-    assert(pHashDigestBlob->GetBufferSize() == 16); // hash digest is always 16 bytes.
-    for (int i = 0; i < pHashDigestBlob->GetBufferSize(); i++)
-        wprintf(L"%.2x", pHashDigest[i]);
-    wprintf(L"\n");
-
-    // The pDebugDxilContainer blob will contain a DxilContainer formatted
-    // binary, but with different parts than the pShader blob retrieved
-    // earlier.
-    // The parts in this container will vary depending on debug options and
-    // the compiler version.
-    // This blob is not meant to be directly interpreted by an application.
-}
-
-//
-// Get separate reflection.
-//
-CComPtr<IDxcBlob> pReflectionData;
-pResults->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&pReflectionData), nullptr);
-if (pReflectionData != nullptr)
-{
-    // Optionally, save reflection blob for later here.
-
-    // Create reflection interface.
-    DxcBuffer ReflectionData;
-    ReflectionData.Encoding = DXC_CP_ACP;
-    ReflectionData.Ptr = pReflectionData->GetBufferPointer();
-    ReflectionData.Size = pReflectionData->GetBufferSize();
-
-    CComPtr< ID3D12ShaderReflection > pReflection;
-    pUtils->CreateReflection(&ReflectionData, IID_PPV_ARGS(&pReflection));
-
-    // Use reflection interface here.
-
-}
-}
 
 // ===========================================================================
 // PopulateCommandList ? per-frame rendering.
@@ -704,13 +445,14 @@ void Model::CompileDXRShaderLibrary(
     DX::ThrowIfFailed(dxcLibrary->CreateIncludeHandler(&includeHandler));
 
     ComPtr<IDxcOperationResult> result;
+    LPCWSTR compileArgs[] = { L"/DC_HLSL" };
     DX::ThrowIfFailed(dxcCompiler->Compile(
         sourceBlob.Get(),
         shaderPath,
-        L"",         // No single entry point ? this is a library.
-        L"lib_6_3",  // DXR shader library target
-        nullptr, 0,  // No extra compiler arguments
-        nullptr, 0,  // No preprocessor defines
+        L"",
+        L"lib_6_3",
+        compileArgs, ARRAYSIZE(compileArgs),
+        nullptr, 0,
         includeHandler.Get(),
         &result));
 
@@ -780,13 +522,10 @@ void Model::LoadCompiledShaderLibrary(
 }
 void Model::CreateRaytracingPipelineStateObject(DX::DeviceResources* DR)
 {
-    // Load precompiled DXIL shader library.
     std::vector<BYTE> dxilBlob;
     void* pBytecode = nullptr;
     SIZE_T bytecodeSize = 0;
-
-    LoadCompiledShaderLibrary(L"RaytracingSphere.cso", &pBytecode, &bytecodeSize, dxilBlob);
-    // Build the RTPSO with 5 subobjects.
+    CompileDXRShaderLibrary(L"AssimpRay.hlsl", &pBytecode, &bytecodeSize, dxilBlob);  // Build the RTPSO with 5 subobjects.
     CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
 
     // 1. DXIL library
@@ -890,69 +629,6 @@ void Model::CreateConstantBuffers(ID3D12Device* device)
     }
 }
 
-// ===========================================================================
-// BuildGeometry
-// Uses DirectXTK12 GeometricPrimitive::CreateSphere to get vertex/index data,
-// then uploads position+normal into D3D12MA UPLOAD-heap buffers.
-// ===========================================================================
-void Model::BuildGeometry(DX::DeviceResources* DR)
-{
-    auto device = DR->GetD3DDevice();
-
-    // Generate sphere geometry (unit sphere, 32 subdivisions, LH coordinates).
-    std::vector<GeometricPrimitive::VertexType> dxtkVertices;
-    std::vector<uint16_t> dxtkIndices;
-    GeometricPrimitive::CreateSphere(dxtkVertices, dxtkIndices, 1.0f, 32, false);
-
-    m_vertexCount = static_cast<UINT>(dxtkVertices.size());
-    m_indexCount = static_cast<UINT>(dxtkIndices.size());
-
-    // Strip texture coordinates: convert VertexPositionNormalTexture → Vertex.
-    std::vector<DirectX::VertexPositionNormalColorTexture> vertices(m_vertexCount);
-    for (UINT i = 0; i < m_vertexCount; ++i)
-    {
-        vertices[i].position = dxtkVertices[i].position;
-        vertices[i].normal = dxtkVertices[i].normal;
-    }
-
-    // ----- Vertex buffer (D3D12MA UPLOAD heap) -----
-    {
-        UINT64 vbSize = sizeof(DirectX::VertexPositionNormalColorTexture) * m_vertexCount;
-        D3D12MA::CALLOCATION_DESC allocDesc(D3D12_HEAP_TYPE_UPLOAD,
-            D3D12MA::ALLOCATION_FLAG_NONE);
-        auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(vbSize);
-        DX::ThrowIfFailed(m_allocator->CreateResource(
-            &allocDesc, &resDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-            &m_vertexAllocation, IID_PPV_ARGS(&m_vertexBuffer)));
-        m_vertexBuffer->SetName(L"SphereVertexBuffer");
-
-        void* pData;
-        CD3DX12_RANGE readRange(0, 0);
-        DX::ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, &pData));
-        memcpy(pData, vertices.data(), static_cast<size_t>(vbSize));
-        m_vertexBuffer->Unmap(0, nullptr);
-    }
-
-    // ----- Index buffer (D3D12MA UPLOAD heap) -----
-    {
-        UINT64 ibSize = sizeof(uint16_t) * m_indexCount;
-        D3D12MA::CALLOCATION_DESC allocDesc(D3D12_HEAP_TYPE_UPLOAD,
-            D3D12MA::ALLOCATION_FLAG_NONE);
-        auto resDesc = CD3DX12_RESOURCE_DESC::Buffer(ibSize);
-        DX::ThrowIfFailed(m_allocator->CreateResource(
-            &allocDesc, &resDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-            &m_indexAllocation, IID_PPV_ARGS(&m_indexBuffer)));
-        m_indexBuffer->SetName(L"SphereIndexBuffer");
-
-        void* pData;
-        CD3DX12_RANGE readRange(0, 0);
-        DX::ThrowIfFailed(m_indexBuffer->Map(0, &readRange, &pData));
-        memcpy(pData, dxtkIndices.data(), static_cast<size_t>(ibSize));
-        m_indexBuffer->Unmap(0, nullptr);
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Helpers for acceleration-structure buffer allocation (DEFAULT heap).
@@ -1109,84 +785,7 @@ void Model::BuildAccelerationStructures(DX::DeviceResources* DR)
     CloseHandle(event);
 }
 
-// ===========================================================================
-// CreateRaytracingOutputResource
-// Creates a 2D texture with UAV for the raytracing output and registers its
-// UAV descriptor in the heap.
-// ===========================================================================
-void Model::CreateRaytracingOutputResource(DX::DeviceResources* DR)
-{
-    auto device = DR->GetD3DDevice();
 
-    // Use the same format as the back buffer so CopyResource works directly.
-    DXGI_FORMAT backBufferFmt = DR->GetBackBufferFormat();
-
-    D3D12_RESOURCE_DESC outputDesc = {};
-    outputDesc.DepthOrArraySize = 1;
-    outputDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    outputDesc.Format = backBufferFmt;
-    outputDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    outputDesc.Width = m_width;
-    outputDesc.Height = m_height;
-    outputDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    outputDesc.MipLevels = 1;
-    outputDesc.SampleDesc = { 1, 0 };
-
-    auto heapProps = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    DX::ThrowIfFailed(device->CreateCommittedResource(
-        &heapProps, D3D12_HEAP_FLAG_NONE, &outputDesc,
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr,
-        IID_PPV_ARGS(&m_raytracingOutput)));
-    m_raytracingOutput->SetName(L"RaytracingOutput");
-
-    // Register UAV descriptor (heap index 0).
-    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
-    UINT idx = AllocateDescriptor(&cpuHandle,
-        SphereRaytracing::DescriptorIndex::RaytracingOutputUAV);
-
-    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-    device->CreateUnorderedAccessView(m_raytracingOutput.Get(), nullptr, &uavDesc, cpuHandle);
-
-    // Store the GPU handle for use during ray dispatch.
-    m_raytracingOutputUAVGpuDescriptor =
-        CD3DX12_GPU_DESCRIPTOR_HANDLE(
-            m_descriptorHeap->GetGPUDescriptorHandleForHeapStart(),
-            static_cast<INT>(idx), m_descriptorSize);
-
-    // Register SRV descriptors for index (t1) and vertex (t2) buffers.
-    // (These are set once here; the UAV heap slot is 0, SRVs are 1 and 2.)
-
-    // Index buffer SRV (ByteAddressBuffer, t1)
-    {
-        D3D12_CPU_DESCRIPTOR_HANDLE srvCpu;
-        AllocateDescriptor(&srvCpu, SphereRaytracing::DescriptorIndex::IndexBufferSRV);
-
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-        srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-        srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-        srvDesc.Buffer.NumElements =
-            static_cast<UINT>(m_indexCount * sizeof(uint16_t) / sizeof(UINT32));
-        device->CreateShaderResourceView(m_indexBuffer.Get(), &srvDesc, srvCpu);
-    }
-
-    // Vertex buffer SRV (StructuredBuffer<Vertex>, t2)
-    {
-        D3D12_CPU_DESCRIPTOR_HANDLE srvCpu;
-        AllocateDescriptor(&srvCpu, SphereRaytracing::DescriptorIndex::VertexBufferSRV);
-
-        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-        srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-        srvDesc.Buffer.NumElements = m_vertexCount;
-        srvDesc.Buffer.StructureByteStride = sizeof(DirectX::VertexPositionNormalColorTexture);
-        srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-        device->CreateShaderResourceView(m_vertexBuffer.Get(), &srvDesc, srvCpu);
-    }
-}
 
 // ===========================================================================
 // BuildShaderTables
@@ -1451,183 +1050,6 @@ void Model::CreateRaytracingOutputResource(DX::DeviceResources* DR)
         srvDesc.Buffer.StructureByteStride = sizeof(DirectX::VertexPositionNormalColorTexture);
         srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
         device->CreateShaderResourceView(m_vertexBuffer.Get(), &srvDesc, srvCpu);
-    }
-}
-
-void Model::CompileDXRShaderLibrary(
-    LPCWSTR shaderPath,
-    void** ppBytecode,
-    SIZE_T* pBytecodeSize,
-    std::vector<BYTE>& outBlob) {
-    // 
-    // Create compiler and utils.
-    //
-    CComPtr<IDxcUtils> pUtils;
-    CComPtr<IDxcCompiler3> pCompiler;
-    DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
-    DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
-
-    //
-    // Create default include handler. (You can create your own...)
-    //
-    CComPtr<IDxcIncludeHandler> pIncludeHandler;
-    pUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
-
-
-    //
-    // COMMAND LINE:
-    // dxc myshader.hlsl -E main -T ps_6_0 -Zi -D MYDEFINE=1 -Fo myshader.bin -Fd myshader.pdb -Qstrip_reflect
-    //
-    LPCWSTR pszArgs[] =
-    {
-        L"myshader.hlsl",            // Optional shader source file name for error reporting
-        // and for PIX shader source view.  
-    L"-E", L"main",              // Entry point.
-    L"-T", L"ps_6_0",            // Target.
-    L"-Zs",                      // Enable debug information (slim format)
-    L"-D", L"MYDEFINE=1",        // A single define.
-    L"-Fo", L"myshader.bin",     // Optional. Stored in the pdb. 
-    L"-Fd", L"myshader.pdb",     // The file name of the pdb. This must either be supplied
-    // or the autogenerated file name must be used.
-    L"-Qstrip_reflect",          // Strip reflection into a separate blob. 
-    };
-
-
-    //
-    // Open source file.  
-    //
-    CComPtr<IDxcBlobEncoding> pSource = nullptr;
-    pUtils->LoadFile(L"myshader.hlsl", nullptr, &pSource);
-    DxcBuffer Source;
-    Source.Ptr = pSource->GetBufferPointer();
-    Source.Size = pSource->GetBufferSize();
-    Source.Encoding = DXC_CP_ACP; // Assume BOM says UTF8 or UTF16 or this is ANSI text.
-
-
-    //
-    // Compile it with specified arguments.
-    //
-    CComPtr<IDxcResult> pResults;
-    pCompiler->Compile(
-        &Source,                // Source buffer.
-        pszArgs,                // Array of pointers to arguments.
-        _countof(pszArgs),      // Number of arguments.
-        pIncludeHandler,        // User-provided interface to handle #include directives (optional).
-        IID_PPV_ARGS(&pResults) // Compiler output status, buffer, and errors.
-    );
-
-    //
-    // Print errors if present.
-    //
-    CComPtr<IDxcBlobUtf8> pErrors = nullptr;
-    pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
-    // Note that d3dcompiler would return null if no errors or warnings are present.
-    // IDxcCompiler3::Compile will always return an error buffer, but its length
-    // will be zero if there are no warnings or errors.
-    if (pErrors != nullptr && pErrors->GetStringLength() != 0)
-        wprintf(L"Warnings and Errors:\n%S\n", pErrors->GetStringPointer());
-
-    //
-    // Quit if the compilation failed.
-    //
-    HRESULT hrStatus;
-    pResults->GetStatus(&hrStatus);
-    if (FAILED(hrStatus))
-    {
-        wprintf(L"Compilation Failed\n");
-        
-    }
-
-    //
-    // Save shader binary.
-    //
-    CComPtr<IDxcBlob> pShader = nullptr;
-    CComPtr<IDxcBlobUtf16> pShaderName = nullptr;
-    pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pShader), &pShaderName);
-    if (pShader != nullptr)
-    {
-        FILE* fp = NULL;
-
-        _wfopen_s(&fp, pShaderName->GetStringPointer(), L"wb");
-        fwrite(pShader->GetBufferPointer(), pShader->GetBufferSize(), 1, fp);
-        fclose(fp);
-    }
-
-    //
-    // Save pdb.
-    //
-    CComPtr<IDxcBlob> pPDB = nullptr;
-    CComPtr<IDxcBlobUtf16> pPDBName = nullptr;
-    pResults->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pPDB), &pPDBName);
-    {
-        FILE* fp = NULL;
-
-        // Note that if you don't specify -Fd, a pdb name will be automatically generated.
-        // Use this file name to save the pdb so that PIX can find it quickly.
-        _wfopen_s(&fp, pPDBName->GetStringPointer(), L"wb");
-        fwrite(pPDB->GetBufferPointer(), pPDB->GetBufferSize(), 1, fp);
-        fclose(fp);
-    }
-
-    //
-    // Print hash.
-    //
-    CComPtr<IDxcBlob> pHash = nullptr;
-    pResults->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&pHash), nullptr);
-    if (pHash != nullptr)
-    {
-        wprintf(L"Hash: ");
-        DxcShaderHash* pHashBuf = (DxcShaderHash*)pHash->GetBufferPointer();
-        for (int i = 0; i < _countof(pHashBuf->HashDigest); i++)
-            wprintf(L"%.2x", pHashBuf->HashDigest[i]);
-        wprintf(L"\n");
-    }
-
-    //
-    // Demonstrate getting the hash from the PDB blob using the IDxcUtils::GetPDBContents API
-    //
-    CComPtr<IDxcBlob> pHashDigestBlob = nullptr;
-    CComPtr<IDxcBlob> pDebugDxilContainer = nullptr;
-    if (SUCCEEDED(pUtils->GetPDBContents(pPDB, &pHashDigestBlob, &pDebugDxilContainer)))
-    {
-        // This API returns the raw hash digest, rather than a DxcShaderHash structure.
-        // This will be the same as the DxcShaderHash::HashDigest returned from
-        // IDxcResult::GetOutput(DXC_OUT_SHADER_HASH, ...).
-        wprintf(L"Hash from PDB: ");
-        const BYTE* pHashDigest = (const BYTE*)pHashDigestBlob->GetBufferPointer();
-        assert(pHashDigestBlob->GetBufferSize() == 16); // hash digest is always 16 bytes.
-        for (int i = 0; i < pHashDigestBlob->GetBufferSize(); i++)
-            wprintf(L"%.2x", pHashDigest[i]);
-        wprintf(L"\n");
-
-        // The pDebugDxilContainer blob will contain a DxilContainer formatted
-        // binary, but with different parts than the pShader blob retrieved
-        // earlier.
-        // The parts in this container will vary depending on debug options and
-        // the compiler version.
-        // This blob is not meant to be directly interpreted by an application.
-    }
-
-    //
-    // Get separate reflection.
-    //
-    CComPtr<IDxcBlob> pReflectionData;
-    pResults->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&pReflectionData), nullptr);
-    if (pReflectionData != nullptr)
-    {
-        // Optionally, save reflection blob for later here.
-
-        // Create reflection interface.
-        DxcBuffer ReflectionData;
-        ReflectionData.Encoding = DXC_CP_ACP;
-        ReflectionData.Ptr = pReflectionData->GetBufferPointer();
-        ReflectionData.Size = pReflectionData->GetBufferSize();
-
-        CComPtr< ID3D12ShaderReflection > pReflection;
-        pUtils->CreateReflection(&ReflectionData, IID_PPV_ARGS(&pReflection));
-
-        // Use reflection interface here.
-
     }
 }
 

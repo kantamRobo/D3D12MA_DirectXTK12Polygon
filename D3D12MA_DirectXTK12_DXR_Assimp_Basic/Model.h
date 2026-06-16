@@ -7,6 +7,12 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
+
+// DXC shader compiler API (Windows SDK 10.0.17134+)
+// If your SDK is older, copy dxcapi.h from the DirectX Shader Compiler release.
+#include <atlbase.h>        // Common COM helpers.
+#include <dxcapi.h>         // Be sure to link with dxcompiler.lib.
+#include <d3d12shader.h>    // Shader reflection.
 #include "D3D12MemAlloc.h"
 using namespace DirectX;
 
@@ -66,9 +72,17 @@ struct SceneConstantBuffer
 class Model
 {
 public:
+    ~Model();
+    Model() {};
+   
+    // ---------------------------------------------------------------------------
+// Shader entry-point / hit-group names (must match RaytracingSphere.hlsl)
+// ---------------------------------------------------------------------------
+    const wchar_t* c_raygenShaderName = L"MyRaygenShader";
+    const wchar_t* c_closestHitShaderName = L"MyClosestHitShader";
+    const wchar_t* c_missShaderName = L"MyMissShader";
+    const wchar_t* c_hitGroupName = L"MyHitGroup";
 
-    //assimp aiscene
-	aiScene* m_scene = nullptr;
 
     // -----------------------------------------------------------------------
     // DXR interfaces (obtained via QueryInterface from the base device/list)
@@ -112,12 +126,7 @@ public:
     // Raytracing output UAV texture
     Microsoft::WRL::ComPtr<ID3D12Resource> m_raytracingOutput;
     D3D12_GPU_DESCRIPTOR_HANDLE            m_raytracingOutputUAVGpuDescriptor = {};
-    // Scene and sphere constant buffers (persistently mapped upload heap)
-    // Shader tables
-    static const wchar_t* c_raygenShaderName;
-    static const wchar_t* c_closestHitShaderName;
-    static const wchar_t* c_missShaderName;
-    static const wchar_t* c_hitGroupName;
+    
 
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rayGenShaderTable;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_missShaderTable;
@@ -129,11 +138,14 @@ public:
 	std::vector<VertexPositionNormalColorTexture> vertices;
     std::vector<uint16_t> indices;
     bool LoadModel(const char* path);
-	std::vector<DirectX::VertexPositionNormalColorTexture> GenerateVertices();
-	//Model.cppÇ≈íËã`Ç≥ÇÍÇΩä÷êîÇÃêÈåæ
+	
+    std::vector<DirectX::VertexPositionNormalColorTexture> GenerateVertices(const char* path);
+    //Model.cppÇ≈íËã`Ç≥ÇÍÇΩä÷êîÇÃêÈåæ
 	void BuildGeometry(DX::DeviceResources* DR);
+    void LoadAssets(DX::DeviceResources* DR, const char* filePath);
 	void CreateConstantBuffers(ID3D12Device* device);
-	void CreateRaytracingPipelineStateObject(DX::DeviceResources* DR);
+    void LoadCompiledShaderLibrary(LPCWSTR csoPath, void** ppBytecode, SIZE_T* pBytecodeSize, std::vector<BYTE>& outBlob);
+    void CreateRaytracingPipelineStateObject(DX::DeviceResources* DR);
 	void CreateGlobalRootSignature(ID3D12Device* device);
 	void CreateDescriptorHeap(ID3D12Device* device);
 	void CompileDXRShaderLibrary(

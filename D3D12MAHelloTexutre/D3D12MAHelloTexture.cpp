@@ -117,3 +117,4 @@ D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 
 }
+//

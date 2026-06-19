@@ -22,6 +22,7 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="D3D12MAHelloTexture.h" />
+    <ClInclude Include="DXSampleHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />

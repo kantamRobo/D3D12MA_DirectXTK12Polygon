@@ -11,6 +11,7 @@ class D3D12MAHelloTexture
 public:
 	D3D12MAHelloTexture() {};
 	D3D12MAHelloTexture(DX::DeviceResources* DR);
+	void LoadAsset();
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 	Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;

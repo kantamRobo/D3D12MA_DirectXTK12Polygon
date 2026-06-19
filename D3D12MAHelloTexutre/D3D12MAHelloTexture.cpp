@@ -117,4 +117,54 @@ D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 
 }
-//
+
+void D3D12MAHelloTexture::LoadAsset(){
+// 既存のCreateCommittedResource箇所を以下のように置き換えます
+
+// 1. テクスチャリソースの作成（Defaultヒープ）
+D3D12MA::ALLOCATION_DESC texAllocDesc = {};
+texAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+CD3DX12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height);
+
+// D3D12MAを使用してリソースを確保
+ComPtr<D3D12MA::Allocation> texAllocation;
+ComPtr<ID3D12Resource> texture;
+allocator->CreateResource(&texAllocDesc, &texDesc, D3D12_RESOURCE_STATE_COPY_DEST,
+    nullptr, &texAllocation, IID_PPV_ARGS(&texture));
+
+// 2. アップロード用バッファの作成（Uploadヒープ）
+UINT64 uploadBufferSize = 0;
+D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
+device->GetCopyableFootprints(&texDesc, 0, 1, 0, &layout, nullptr, nullptr, &uploadBufferSize);
+
+D3D12MA::ALLOCATION_DESC uploadAllocDesc = {};
+uploadAllocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+ComPtr<D3D12MA::Allocation> uploadAllocation;
+ComPtr<ID3D12Resource> uploadBuffer;
+allocator->CreateResource(&uploadAllocDesc, &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+    D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+    &uploadAllocation, IID_PPV_ARGS(&uploadBuffer));
+
+// 3. データのコピー処理（Map/Unmapは従来通り）
+void* pMappedData;
+uploadBuffer->Map(0, nullptr, &pMappedData);
+memcpy(pMappedData, pRawTextureData, dataSize); // 実際にはlayout.Footprint.RowPitchを考慮したコピーが必要
+uploadBuffer->Unmap(0, nullptr);
+
+// 4. コマンドによるコピー処理
+CD3DX12_TEXTURE_COPY_LOCATION dst(texture.Get());
+CD3DX12_TEXTURE_COPY_LOCATION src(uploadBuffer.Get(), layout);
+commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+
+
+
+// D3D12HelloTexture.h 内
+ComPtr<D3D12MA::Allocator> m_allocator;
+
+D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
+allocatorDesc.pDevice = m_device.Get();
+allocatorDesc.pAdapter = hardwareAdapter.Get(); // もしくは warpAdapter
+D3D12MA::CreateAllocator(&allocatorDesc, &m_allocator);
+}

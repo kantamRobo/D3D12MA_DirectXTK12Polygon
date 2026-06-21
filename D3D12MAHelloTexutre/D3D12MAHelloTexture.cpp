@@ -8,6 +8,15 @@ D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 {
     
+    RenderTargetState rtState(DR->GetBackBufferFormat(),
+        DR->GetDepthBufferFormat());
+
+    EffectPipelineStateDescription pd(
+        &InputLayout,
+        CommonStates::Opaque,
+        CommonStates::DepthDefault,
+        CommonStates::CullCounterClockwise,
+        rtState);
 
 
 

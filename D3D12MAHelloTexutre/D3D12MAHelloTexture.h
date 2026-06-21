@@ -6,11 +6,12 @@
 #include <DirectXMath.h>
 #include <DeviceResources.h>
 #include <DirectXTex.h>
-
+#include <D3D12MemAlloc.h>
+#include "pch.h"
 struct Vertex
 {
-	XMFLOAT3 position;
-	XMFLOAT2 uv;
+	DirectX::XMFLOAT3 position;
+	DirectX::XMFLOAT2 uv;
 };
 
 class D3D12MAHelloTexture
@@ -22,12 +23,16 @@ public:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 	Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
+
+	std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
+
 	m_rootSignature;
 	m_device;
 	m_commandAllocator;
 	m_pipelineState;//EffectPipelineStateDescription‚ÉŠ·‘•‚·‚é
 	m_commandList;
 	commandQueue
+
 private:
 	const UINT TextureWidth = 256;
 	 const UINT TextureHeight = 256;

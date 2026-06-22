@@ -250,4 +250,4 @@ void ResetUniquePtrArray(T* uniquePtrArray)
     {
         i.reset();
     }
-}#pragma once
+}

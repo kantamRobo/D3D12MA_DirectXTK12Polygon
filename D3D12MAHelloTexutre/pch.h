@@ -66,7 +66,7 @@
 #include <stdexcept>
 #include <system_error>
 #include <tuple>
-
+#include "D3D12MemAlloc.h"
 #include "BufferHelpers.h"
 #include "CommonStates.h"
 #include "DDSTextureLoader.h"

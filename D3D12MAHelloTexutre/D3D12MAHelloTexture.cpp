@@ -1,9 +1,19 @@
 #include "pch.h"
 #include "D3D12MAHelloTexture.h"
-#include "D3D12MemAlloc.h"
+
 #include <vector>
-#include <DXSampleHelper.h>
+#include "DXSampleHelper.h"
+#include <string>
+#include <filesystem>
 using namespace DirectX;
+enum Descriptors
+{
+    WindowsLogo,
+    CourierFont,
+    ControllerFont,
+    GamerPic,
+    Count
+};
 D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 {
@@ -22,9 +32,9 @@ D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 }
 
-void D3D12MAHelloTexture::LoadAsset(){
+void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
 
-    
+	auto device = DR->GetD3DDevice();
     // Create the root signature.
     {
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -32,7 +42,7 @@ void D3D12MAHelloTexture::LoadAsset(){
         // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-        if (FAILED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+        if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
         {
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
         }
@@ -64,7 +74,7 @@ void D3D12MAHelloTexture::LoadAsset(){
         Microsoft::WRL::ComPtr<ID3DBlob> signature;
         Microsoft::WRL::ComPtr<ID3DBlob> error;
         DX::ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-        DX::ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+        DX::ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
     }
 
     // Create the pipeline state, which includes compiling and loading shaders.
@@ -99,12 +109,9 @@ void D3D12MAHelloTexture::LoadAsset(){
         psoDesc.NumRenderTargets = 1;
         psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         psoDesc.SampleDesc.Count = 1;
-        DX::ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+        DX::ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
     }
-
-    // Create the command list.
-    DX::ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
-
+	
     // Create the vertex buffer.
     {
         // Define the geometry for a triangle.
@@ -151,6 +158,12 @@ void D3D12MAHelloTexture::LoadAsset(){
 
         CD3DX12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height);
 
+        D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
+        allocatorDesc.pDevice = device;
+		allocatorDesc.pAdapter = DR->adapter.Get(); // もしくは warpAdapter
+        allocatorDesc.Flags = D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS;
+		D3D12MA::Allocator* allocator = nullptr;
+		auto result =D3D12MA::CreateAllocator(&allocatorDesc,&allocator);
         // D3D12MAを使用してリソースを確保
         Microsoft::WRL::ComPtr<D3D12MA::Allocation> texAllocation;
         Microsoft::WRL::ComPtr<ID3D12Resource> texture;
@@ -175,17 +188,17 @@ void D3D12MAHelloTexture::LoadAsset(){
 
         // 4. コマンドによるコピー処理  
         D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = &texture[0];
+        textureData.pData = texture.GetAddressOf();
         textureData.RowPitch = TextureWidth * TexturePixelSize;
         textureData.SlicePitch = textureData.RowPitch * TextureHeight;
 
-        UpdateSubresources(m_commandList.Get(), m_texture.Get(), textureUploadHeap.Get(), 0, 0, 1, &textureData);
+        UpdateSubresources(m_commandList.Get(), m_texture.Get(), uploadBuffer.Get(), 0, 0, 1, &textureData);
         //中間バッファはtextureUploadHeapになる。メンバ変数にID3D12Resourceのポインタを用意する
 
 
         // D3D12HelloTexture.h 内
         Microsoft::WRL::ComPtr<D3D12MA::Allocator> m_allocator;
-
+		auto  hardwareAdapter = DR->adapter;
         D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
         allocatorDesc.pDevice = m_device.Get();
         allocatorDesc.pAdapter = hardwareAdapter.Get(); // もしくは warpAdapter
@@ -201,14 +214,14 @@ void D3D12MAHelloTexture::LoadAsset(){
 
         D3D12MA::ALLOCATION_DESC defaultAllocDesc = {};
         defaultAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
+		Microsoft::WRL::ComPtr<D3D12MA::Allocation> textureAllocation = nullptr;
         // ヘッダにある m_texture を使用
         HRESULT hr = m_allocator->CreateResource(
             &defaultAllocDesc,
             &textureDesc,
             D3D12_RESOURCE_STATE_COPY_DEST, // 初期状態はコピー先
             nullptr,
-            m_textureAllocation.ReleaseAndGetAddressOf(),// D3D12MA::Allocationのアドレスを取得
+            textureAllocation.ReleaseAndGetAddressOf(),// D3D12MA::Allocationのアドレスを取得
             IID_PPV_ARGS(m_texture.ReleaseAndGetAddressOf())
         );
         if (FAILED(hr)) { /* 適切なエラーハンドリング */ }
@@ -219,7 +232,7 @@ void D3D12MAHelloTexture::LoadAsset(){
         // -------------------------------------------------------------
         const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
         CD3DX12_RESOURCE_DESC uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-
+        Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation = nullptr;
         D3D12MA::ALLOCATION_DESC uploadAllocDesc = {};
         uploadAllocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 
@@ -229,7 +242,7 @@ void D3D12MAHelloTexture::LoadAsset(){
             &uploadBufferDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
-			m_uploadAllocation.ReleaseAndGetAddressOf(),// D3D12MA::Allocationのアドレスを取得
+			uploadAllocation.ReleaseAndGetAddressOf(),// D3D12MA::Allocationのアドレスを取得
             IID_PPV_ARGS(uploadBuffer.ReleaseAndGetAddressOf())
         );
         if (FAILED(hr)) { /* 適切なエラーハンドリング */ }
@@ -262,7 +275,7 @@ void D3D12MAHelloTexture::LoadAsset(){
             D3D12_RESOURCE_STATE_COPY_DEST,
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
         );
-
+		auto commandQueue = DR->GetCommandQueue();
         // コマンドキューを実行し、完了まで待機
         auto uploadResourcesFinished = resourceUpload.End(commandQueue);
         uploadResourcesFinished.wait();
@@ -289,4 +302,13 @@ void D3D12MAHelloTexture::LoadAsset(){
             m_resourceDescriptors->GetCpuHandle(0)
         )
     };
+}
+
+// アセットファイルのフルパスを取得するユーティリティ関数
+static std::wstring GetAssetFullPath(const std::wstring& assetName)
+{
+    // 実際のプロジェクトに合わせてアセットディレクトリを指定してください
+    // 例: 実行ファイルと同じディレクトリに "assets" フォルダがある場合
+    std::filesystem::path assetDir = std::filesystem::current_path() / L"assets";
+    return (assetDir / assetName).wstring();
 }

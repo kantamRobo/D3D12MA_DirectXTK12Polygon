@@ -5,7 +5,6 @@
 #include <dxgi1_4.h>
 #include <DirectXMath.h>
 #include <DeviceResources.h>
-#include <DirectXTex.h>
 #include <D3D12MemAlloc.h>
 #include "pch.h"
 struct Vertex
@@ -19,19 +18,16 @@ class D3D12MAHelloTexture
 public:
 	D3D12MAHelloTexture() {};
 	D3D12MAHelloTexture(DX::DeviceResources* DR);
-	void LoadAsset();
+	void LoadAsset(DX::DeviceResources* DR);
+	
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 	Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
-
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
 
-	m_rootSignature;
-	m_device;
-	m_commandAllocator;
-	m_pipelineState;//EffectPipelineStateDescription‚ÉŠ·‘•‚·‚é
-	m_commandList;
-	commandQueue
+	
 
 private:
 	const UINT TextureWidth = 256;

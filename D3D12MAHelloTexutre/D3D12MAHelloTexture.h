@@ -20,6 +20,8 @@ public:
 	D3D12MAHelloTexture() {};
 	D3D12MAHelloTexture(DX::DeviceResources* DR);
 	void LoadAsset(DX::DeviceResources* DR);
+
+	std::vector<UINT8> GenerateTextureData();
 	
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 	Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
@@ -29,7 +31,7 @@ public:
 	std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
 
 	
-
+	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 private:
 	const UINT TextureWidth = 256;
 	 const UINT TextureHeight = 256;

@@ -36,6 +36,7 @@ D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
 
 	auto device = DR->GetD3DDevice();
+	auto commandList = DR->GetCommandList();
     // Create the root signature.
     {
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -193,7 +194,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         textureData.RowPitch = TextureWidth * TexturePixelSize;
         textureData.SlicePitch = textureData.RowPitch * TextureHeight;
 
-        UpdateSubresources(m_commandList.Get(), m_texture.Get(), uploadBuffer.Get(), 0, 0, 1, &textureData);
+        UpdateSubresources(commandList, m_texture.Get(), uploadBuffer.Get(), 0, 0, 1, &textureData);
         //中間バッファはtextureUploadHeapになる。メンバ変数にID3D12Resourceのポインタを用意する
 
 
@@ -301,9 +302,47 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
             m_texture.Get(),
             &srvDesc,
             m_resourceDescriptors->GetCpuHandle(0)
-        )
+        );
     };
 }
+
+// Generate a simple black and white checkerboard texture.
+std::vector<UINT8> D3D12MAHelloTexture::GenerateTextureData()
+{
+    const UINT rowPitch = TextureWidth * TexturePixelSize;
+    const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
+    const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
+    const UINT textureSize = rowPitch * TextureHeight;
+
+    std::vector<UINT8> data(textureSize);
+    UINT8* pData = &data[0];
+
+    for (UINT n = 0; n < textureSize; n += TexturePixelSize)
+    {
+        UINT x = n % rowPitch;
+        UINT y = n / rowPitch;
+        UINT i = x / cellPitch;
+        UINT j = y / cellHeight;
+
+        if (i % 2 == j % 2)
+        {
+            pData[n] = 0x00;        // R
+            pData[n + 1] = 0x00;    // G
+            pData[n + 2] = 0x00;    // B
+            pData[n + 3] = 0xff;    // A
+        }
+        else
+        {
+            pData[n] = 0xff;        // R
+            pData[n + 1] = 0xff;    // G
+            pData[n + 2] = 0xff;    // B
+            pData[n + 3] = 0xff;    // A
+        }
+    }
+
+    return data;
+}
+
 
 // アセットファイルのフルパスを取得するユーティリティ関数
 static std::wstring GetAssetFullPath(const std::wstring& assetName)

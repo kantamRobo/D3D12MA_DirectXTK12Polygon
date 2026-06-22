@@ -1,10 +1,11 @@
 #include "pch.h"
 #include "D3D12MAHelloTexture.h"
-
+#include "EffectPipelineStateDescription.h"
 #include <vector>
 #include "DXSampleHelper.h"
 #include <string>
 #include <filesystem>
+#include "VertexTypes.h"
 using namespace DirectX;
 enum Descriptors
 {
@@ -17,7 +18,7 @@ enum Descriptors
 D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 {
-    
+    auto InputLayout= VertexPositionColorTexture::InputLayout;
     RenderTargetState rtState(DR->GetBackBufferFormat(),
         DR->GetDepthBufferFormat());
 
@@ -128,7 +129,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         // recommended. Every time the GPU needs it, the upload heap will be marshalled 
         // over. Please read up on Default Heap usage. An upload heap is used here for 
         // code simplicity and because there are very few verts to actually transfer.
-        DX::ThrowIfFailed(m_device->CreateCommittedResource(
+        DX::ThrowIfFailed(device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
@@ -200,7 +201,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         Microsoft::WRL::ComPtr<D3D12MA::Allocator> m_allocator;
 		auto  hardwareAdapter = DR->adapter;
         D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
-        allocatorDesc.pDevice = m_device.Get();
+        allocatorDesc.pDevice = device;
         allocatorDesc.pAdapter = hardwareAdapter.Get(); // ‚à‚µ‚­‚Í warpAdapter
         D3D12MA::CreateAllocator(&allocatorDesc, &m_allocator);
 

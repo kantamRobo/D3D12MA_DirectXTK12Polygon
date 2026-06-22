@@ -6,6 +6,7 @@
 #include <DirectXMath.h>
 #include <DeviceResources.h>
 #include <D3D12MemAlloc.h>
+#include "VertexTypes.h"
 #include "pch.h"
 struct Vertex
 {

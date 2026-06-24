@@ -233,7 +233,18 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader.hlsl" />
+    <CustomBuild Include="shaders.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">dxc.exe -nologo -Tvs_6_0 -E"VSMain" -Zi -Qembed_debug -Fo"$(OutDir)%(Filename)_VSMain.cso" "%(FullPath)"%(FullPath)"
+dxc.exe -nologo -Tps_6_0 -E"PSMain" -Zi -Qembed_debug -Fo"$(OutDir)%(Filename)_PSMain.cso" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Identity)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename)_VSMain.cso;$(OutDir)%(Filename)_PSMain.cso</Outputs>
+      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatOutputAsContent>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

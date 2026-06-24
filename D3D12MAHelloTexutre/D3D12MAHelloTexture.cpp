@@ -117,7 +117,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
     // Create the vertex buffer.
     {
         // Define the geometry for a triangle.
-        Vertex triangleVertices[] =
+        VertexPositionTexture triangleVertices[] =
         {
             { { 0.0f, 0.25f , 0.0f }, { 0.5f, 0.0f } },
             { { 0.25f, -0.25f , 0.0f }, { 1.0f, 1.0f } },

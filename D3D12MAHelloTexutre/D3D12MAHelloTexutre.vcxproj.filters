@@ -50,6 +50,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Shader.hlsl" />
+    <CustomBuild Include="shaders.hlsl" />
   </ItemGroup>
 </Project>

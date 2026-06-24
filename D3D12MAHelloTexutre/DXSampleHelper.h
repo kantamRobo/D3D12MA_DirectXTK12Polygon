@@ -84,30 +84,55 @@ inline HRESULT ReadDataFromFile(LPCWSTR filename, byte** data, UINT* size)
 #endif
     if (file.Get() == INVALID_HANDLE_VALUE)
     {
-		//output error message
-		OutputDebugStringA(("Failed to open file: " + std::string(filename) + "\n").c_str());
+        std::wstring msg = L"Failed to open file: ";
+        msg += (filename ? filename : L"(null)");
+        msg += L"\n";
+        OutputDebugStringW(msg.c_str());
         throw std::exception();
     }
 
     FILE_STANDARD_INFO fileInfo = {};
     if (!GetFileInformationByHandleEx(file.Get(), FileStandardInfo, &fileInfo, sizeof(fileInfo)))
     {
-		OutputDebugStringA(("Failed to get file information: " + std::string(filename) + "\n").c_str());
+        std::wstring msg = L"Failed to get file information: ";
+        msg += (filename ? filename : L"(null)");
+        msg += L"\n";
+        OutputDebugStringW(msg.c_str());
         throw std::exception();
     }
 
     if (fileInfo.EndOfFile.HighPart != 0)
     {
-		OutputDebugStringA(("File too large for 32-bit allocation: " + std::string(filename) + "\n").c_str());
+        std::wstring msg = L"File too large for 32-bit allocation: ";
+        msg += (filename ? filename : L"(null)");
+        msg += L"\n";
+        OutputDebugStringW(msg.c_str());
         throw std::exception();
     }
 
-    *data = reinterpret_cast<byte*>(malloc(fileInfo.EndOfFile.LowPart));
-    *size = fileInfo.EndOfFile.LowPart;
-
-    if (!ReadFile(file.Get(), *data, fileInfo.EndOfFile.LowPart, nullptr, nullptr))
+    SIZE_T fileSize = static_cast<SIZE_T>(fileInfo.EndOfFile.LowPart);
+    *data = reinterpret_cast<byte*>(malloc(fileSize));
+    if (*data == nullptr)
     {
-		OutputDebugStringA(("Failed to read file: " + std::string(filename) + "\n").c_str());
+        std::wstring msg = L"Memory allocation failed for file: ";
+        msg += (filename ? filename : L"(null)");
+        msg += L"\n";
+        OutputDebugStringW(msg.c_str());
+        throw std::bad_alloc();
+    }
+
+    *size = static_cast<UINT>(fileSize);
+
+    DWORD bytesRead = 0;
+    if (!ReadFile(file.Get(), *data, static_cast<DWORD>(fileSize), &bytesRead, nullptr) || bytesRead != fileSize)
+    {
+        std::wstring msg = L"Failed to read file or incomplete read: ";
+        msg += (filename ? filename : L"(null)");
+        msg += L"\n";
+        OutputDebugStringW(msg.c_str());
+        free(*data);
+        *data = nullptr;
+        *size = 0;
         throw std::exception();
     }
 

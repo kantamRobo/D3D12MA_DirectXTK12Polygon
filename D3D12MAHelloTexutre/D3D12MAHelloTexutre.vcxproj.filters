@@ -23,6 +23,7 @@
     </ClInclude>
     <ClInclude Include="D3D12MAHelloTexture.h" />
     <ClInclude Include="DXSampleHelper.h" />
+    <ClInclude Include="D3D12MemAlloc.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -32,6 +33,7 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="D3D12MAHelloTexture.cpp" />
+    <ClCompile Include="D3D12MemAlloc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />

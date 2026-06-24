@@ -15,6 +15,15 @@ enum Descriptors
     GamerPic,
     Count
 };
+// アセットファイルのフルパスを取得するユーティリティ関数
+std::wstring GetAssetFullPath(const std::wstring& assetName)
+{
+    // 実際のプロジェクトに合わせてアセットディレクトリを指定してください
+    // 例: 実行ファイルと同じディレクトリに "assets" フォルダがある場合
+    std::filesystem::path assetDir = std::filesystem::current_path() / L"assets";
+    return (assetDir / assetName).wstring();
+}
+
 D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 {
@@ -119,10 +128,11 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         // Define the geometry for a triangle.
         VertexPositionTexture triangleVertices[] =
         {
-            { { 0.0f, 0.25f , 0.0f }, { 0.5f, 0.0f } },
-            { { 0.25f, -0.25f , 0.0f }, { 1.0f, 1.0f } },
-            { { -0.25f, -0.25f , 0.0f }, { 0.0f, 1.0f } }
-        };
+            { XMFLOAT3(0.0f, 0.25f * 1.0f, 0.0f), XMFLOAT2(0.5f, 0.0f) },
+            { XMFLOAT3(0.25f * 1.0f, -0.25f * 1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
+            { XMFLOAT3(-0.25f * 1.0f, -0.25f * 1.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) }
+		};
+       
 
         const UINT vertexBufferSize = sizeof(triangleVertices);
 
@@ -130,10 +140,12 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         // recommended. Every time the GPU needs it, the upload heap will be marshalled 
         // over. Please read up on Default Heap usage. An upload heap is used here for 
         // code simplicity and because there are very few verts to actually transfer.
+        auto upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto size = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
         DX::ThrowIfFailed(device->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+          &upload,
             D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
+            &size,
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
             IID_PPV_ARGS(&m_vertexBuffer)));
@@ -187,7 +199,8 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
 
         Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation;
         Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
-        allocator->CreateResource(&uploadAllocDesc, &CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize),
+		auto uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+        allocator->CreateResource(&uploadAllocDesc, &uploadBufferDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
             &uploadAllocation, IID_PPV_ARGS(&uploadBuffer));
 
@@ -205,16 +218,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         //中間バッファはtextureUploadHeapになる。メンバ変数にID3D12Resourceのポインタを用意する
 
 
-        // D3D12HelloTexture.h 内
-        Microsoft::WRL::ComPtr<D3D12MA::Allocator> m_allocator;
-		auto  hardwareAdapter = DR->adapter;
-        D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
-        allocatorDesc.pDevice = device;
-        allocatorDesc.pAdapter = hardwareAdapter.Get(); // もしくは warpAdapter
-        D3D12MA::CreateAllocator(&allocatorDesc, &m_allocator);
-
-
-
+      
         // -------------------------------------------------------------
         // 1. テクスチャリソース (DEFAULTヒープ) の生成
         // -------------------------------------------------------------
@@ -225,7 +229,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         defaultAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 		Microsoft::WRL::ComPtr<D3D12MA::Allocation> textureAllocation = nullptr;
         // ヘッダにある m_texture を使用
-        HRESULT hr = m_allocator->CreateResource(
+        HRESULT hr = allocator->CreateResource(
             &defaultAllocDesc,
             &textureDesc,
             D3D12_RESOURCE_STATE_COPY_DEST, // 初期状態はコピー先
@@ -239,16 +243,14 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         // -------------------------------------------------------------
         // 2. アップロードバッファ (UPLOADヒープ) の生成
         // -------------------------------------------------------------
-        const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
-        CD3DX12_RESOURCE_DESC uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-        Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation = nullptr;
-        D3D12MA::ALLOCATION_DESC uploadAllocDesc = {};
-        uploadAllocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-
+        const UINT64 textureuploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
+        CD3DX12_RESOURCE_DESC textureuploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(textureuploadBufferSize);
+       
+        
         // ヘッダにある uploadBuffer を使用
-        hr = m_allocator->CreateResource(
+        hr = allocator->CreateResource(
             &uploadAllocDesc,
-            &uploadBufferDesc,
+            &textureuploadBufferDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
 			uploadAllocation.ReleaseAndGetAddressOf(),// D3D12MA::Allocationのアドレスを取得
@@ -261,8 +263,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         // 3. テクスチャデータのアップロード (ResourceUploadBatchを使用)
         // -------------------------------------------------------------
         // 外部実装の画像データ生成メソッドを呼び出し
-        std::vector<UINT8> textureData = GenerateTextureData();
-
+      
         D3D12_SUBRESOURCE_DATA subresourceData = {};
         subresourceData.pData = textureData.pData;
         subresourceData.RowPitch = TextureWidth * TexturePixelSize; // DXGI_FORMAT_R8G8B8A8_UNORM = 4 bytes per pixel
@@ -353,11 +354,3 @@ std::vector<UINT8> D3D12MAHelloTexture::GenerateTextureData()
 }
 
 
-// アセットファイルのフルパスを取得するユーティリティ関数
-static std::wstring GetAssetFullPath(const std::wstring& assetName)
-{
-    // 実際のプロジェクトに合わせてアセットディレクトリを指定してください
-    // 例: 実行ファイルと同じディレクトリに "assets" フォルダがある場合
-    std::filesystem::path assetDir = std::filesystem::current_path() / L"assets";
-    return (assetDir / assetName).wstring();
-}

@@ -27,18 +27,10 @@ std::wstring GetAssetFullPath(const std::wstring& assetName)
 D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
 
 {
-    auto InputLayout= VertexPositionColorTexture::InputLayout;
-    RenderTargetState rtState(DR->GetBackBufferFormat(),
-        DR->GetDepthBufferFormat());
-
-    EffectPipelineStateDescription pd(
-        &InputLayout,
-        CommonStates::Opaque,
-        CommonStates::DepthDefault,
-        CommonStates::CullCounterClockwise,
-        rtState);
+  
 
 
+	LoadAsset(DR);
 
 }
 
@@ -104,6 +96,8 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
         };
+
+
 
         // Describe and create the graphics pipeline state object (PSO).
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -353,4 +347,18 @@ std::vector<UINT8> D3D12MAHelloTexture::GenerateTextureData()
     return data;
 }
 
-
+//•`‰æ‚·‚é
+void D3D12MAHelloTexture::Render(DX::DeviceResources* DR)
+{
+    auto commandList = DR->GetCommandList();
+    // Set necessary state.
+    commandList->SetPipelineState(m_pipelineState.Get());
+    commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+    ID3D12DescriptorHeap* ppHeaps[] = { m_resourceDescriptors->Heap() };
+    commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    commandList->SetGraphicsRootDescriptorTable(0, m_resourceDescriptors->GetGpuHandle(0));
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+    // Draw the triangle.
+    commandList->DrawInstanced(3, 1, 0, 0);
+}

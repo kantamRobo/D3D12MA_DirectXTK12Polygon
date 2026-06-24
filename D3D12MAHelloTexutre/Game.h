@@ -6,7 +6,7 @@
 
 #include "DeviceResources.h"
 #include "StepTimer.h"
-
+#include "D3D12MAHelloTexture.h"
 
 // A basic game implementation that creates a D3D12 device and
 // provides a game loop.
@@ -57,7 +57,7 @@ private:
 
     // Device resources.
     std::unique_ptr<DX::DeviceResources>        m_deviceResources;
-
+	std::unique_ptr<D3D12MAHelloTexture>         m_scene;
     // Rendering loop timer.
     DX::StepTimer                               m_timer;
 

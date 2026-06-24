@@ -21,7 +21,7 @@ public:
 	D3D12MAHelloTexture() {};
 	D3D12MAHelloTexture(DX::DeviceResources* DR);
 	void LoadAsset(DX::DeviceResources* DR);
-
+	void Render(DX::DeviceResources* DR);
 	std::vector<UINT8> GenerateTextureData();
 	
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;

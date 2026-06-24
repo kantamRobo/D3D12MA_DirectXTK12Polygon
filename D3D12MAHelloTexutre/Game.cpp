@@ -101,7 +101,7 @@ void Game::Render()
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     // m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
-
+	m_scene->Render(m_deviceResources.get());
     PIXEndEvent();
 }
 
@@ -202,7 +202,8 @@ void Game::CreateDeviceDependentResources()
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     // m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
-
+	m_scene = std::make_unique<D3D12MAHelloTexture>(m_deviceResources.get());
+    
     // TODO: Initialize device dependent objects here (independent of window size).
 }
 

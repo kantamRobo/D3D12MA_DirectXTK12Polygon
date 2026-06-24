@@ -84,17 +84,21 @@ inline HRESULT ReadDataFromFile(LPCWSTR filename, byte** data, UINT* size)
 #endif
     if (file.Get() == INVALID_HANDLE_VALUE)
     {
+		//output error message
+		OutputDebugStringA(("Failed to open file: " + std::string(filename) + "\n").c_str());
         throw std::exception();
     }
 
     FILE_STANDARD_INFO fileInfo = {};
     if (!GetFileInformationByHandleEx(file.Get(), FileStandardInfo, &fileInfo, sizeof(fileInfo)))
     {
+		OutputDebugStringA(("Failed to get file information: " + std::string(filename) + "\n").c_str());
         throw std::exception();
     }
 
     if (fileInfo.EndOfFile.HighPart != 0)
     {
+		OutputDebugStringA(("File too large for 32-bit allocation: " + std::string(filename) + "\n").c_str());
         throw std::exception();
     }
 
@@ -103,6 +107,7 @@ inline HRESULT ReadDataFromFile(LPCWSTR filename, byte** data, UINT* size)
 
     if (!ReadFile(file.Get(), *data, fileInfo.EndOfFile.LowPart, nullptr, nullptr))
     {
+		OutputDebugStringA(("Failed to read file: " + std::string(filename) + "\n").c_str());
         throw std::exception();
     }
 

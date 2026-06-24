@@ -87,8 +87,8 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         UINT vertexShaderDataLength = 0;
         UINT pixelShaderDataLength = 0;
 
-        DX::ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"shaders_VSMain.cso").c_str(), &pVertexShaderData, &vertexShaderDataLength));
-        DX::ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"shaders_PSMain.cso").c_str(), &pPixelShaderData, &pixelShaderDataLength));
+        DX::ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"C:\\Users\\hatte\\source\\repos\\D3D12MA_DirectXTK12Polygon\\x64\\Debug\\shaders_VSMain.cso").c_str(), &pVertexShaderData, &vertexShaderDataLength));
+        DX::ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"C:\\Users\\hatte\\source\\repos\\D3D12MA_DirectXTK12Polygon\\x64\\Debug\\shaders_PSMain.cso").c_str(), &pPixelShaderData, &pixelShaderDataLength));
 
         // Define the vertex input layout.
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -179,9 +179,9 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
 		auto result =D3D12MA::CreateAllocator(&allocatorDesc,&allocator);
         // D3D12MAを使用してリソースを確保
         Microsoft::WRL::ComPtr<D3D12MA::Allocation> texAllocation;
-        Microsoft::WRL::ComPtr<ID3D12Resource> texture;
+       
         allocator->CreateResource(&texAllocDesc, &texDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr, &texAllocation, IID_PPV_ARGS(&texture));
+            nullptr, &texAllocation, IID_PPV_ARGS(&m_texture));
 
         // 2. アップロード用バッファの作成（Uploadヒープ）
         UINT64 uploadBufferSize = 0;
@@ -204,10 +204,10 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
 
         // 4. コマンドによるコピー処理  
         D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = texture.GetAddressOf();
+        textureData.pData = m_texture.GetAddressOf();
         textureData.RowPitch = TextureWidth * TexturePixelSize;
         textureData.SlicePitch = textureData.RowPitch * TextureHeight;
-
+        //m_texture 
         UpdateSubresources(commandList, m_texture.Get(), uploadBuffer.Get(), 0, 0, 1, &textureData);
         //中間バッファはtextureUploadHeapになる。メンバ変数にID3D12Resourceのポインタを用意する
 

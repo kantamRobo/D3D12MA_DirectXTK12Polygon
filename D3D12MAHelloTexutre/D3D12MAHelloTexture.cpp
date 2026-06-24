@@ -119,9 +119,9 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         // Define the geometry for a triangle.
         Vertex triangleVertices[] =
         {
-            { { 0.0f, 0.25f * m_aspectRatio, 0.0f }, { 0.5f, 0.0f } },
-            { { 0.25f, -0.25f * m_aspectRatio, 0.0f }, { 1.0f, 1.0f } },
-            { { -0.25f, -0.25f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f } }
+            { { 0.0f, 0.25f , 0.0f }, { 0.5f, 0.0f } },
+            { { 0.25f, -0.25f , 0.0f }, { 1.0f, 1.0f } },
+            { { -0.25f, -0.25f , 0.0f }, { 0.0f, 1.0f } }
         };
 
         const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -154,6 +154,11 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
     // 既存のCreateCommittedResource箇所を以下のように置き換えます
     //テクスチャリソース作成
     {
+		//textureの幅と高さを指定
+		const UINT width = 256;
+		const UINT height = 256;
+
+
         // 1. テクスチャリソースの作成（Defaultヒープ）
         D3D12MA::ALLOCATION_DESC texAllocDesc = {};
         texAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -187,6 +192,8 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
             &uploadAllocation, IID_PPV_ARGS(&uploadBuffer));
 
 
+		//TexturePixelSizeを定義
+		auto TexturePixelSize = 4; // DXGI_FORMAT_R8G8B8A8_UNORMの場合、1ピクセルあたり4バイト
 
         // 4. コマンドによるコピー処理  
         D3D12_SUBRESOURCE_DATA textureData = {};
@@ -257,8 +264,8 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         std::vector<UINT8> textureData = GenerateTextureData();
 
         D3D12_SUBRESOURCE_DATA subresourceData = {};
-        subresourceData.pData = textureData.data();
-        subresourceData.RowPitch = TextureWidth * 4; // DXGI_FORMAT_R8G8B8A8_UNORM = 4 bytes per pixel
+        subresourceData.pData = textureData.pData;
+        subresourceData.RowPitch = TextureWidth * TexturePixelSize; // DXGI_FORMAT_R8G8B8A8_UNORM = 4 bytes per pixel
         subresourceData.SlicePitch = subresourceData.RowPitch * TextureHeight;
 
         ResourceUploadBatch resourceUpload(device);
@@ -309,6 +316,8 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
 // Generate a simple black and white checkerboard texture.
 std::vector<UINT8> D3D12MAHelloTexture::GenerateTextureData()
 {
+	//textrepixelSizeを定義
+	const UINT TexturePixelSize = 4; // DXGI_FORMAT_R8G8B8A8_UNORMの場合、1ピクセルあたり4バイト
     const UINT rowPitch = TextureWidth * TexturePixelSize;
     const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
     const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.

@@ -17,6 +17,7 @@ struct Vertex
 class D3D12MAHelloTexture
 {
 public:
+	
 	D3D12MAHelloTexture() {};
 	D3D12MAHelloTexture(DX::DeviceResources* DR);
 	void LoadAsset(DX::DeviceResources* DR);

@@ -92,7 +92,7 @@ void Game::Render()
     PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, L"Render");
 
     // TODO: Add your rendering code here.
-
+	m_scene->Render(m_deviceResources.get());
     PIXEndEvent(commandList);
 
     // Show the new frame.
@@ -101,7 +101,7 @@ void Game::Render()
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     // m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
-	m_scene->Render(m_deviceResources.get());
+	
     PIXEndEvent();
 }
 

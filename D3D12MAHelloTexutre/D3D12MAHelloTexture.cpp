@@ -206,7 +206,8 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR)
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
         psoDesc.NumRenderTargets = 1;
-        psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        //レンダーターゲットと一致させる
+		psoDesc.RTVFormats[0] = DR->GetBackBufferFormat();
 
         psoDesc.SampleDesc.Count = 1;
 

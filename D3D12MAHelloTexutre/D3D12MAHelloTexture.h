@@ -24,11 +24,17 @@ public:
 	void Render(DX::DeviceResources* DR);
 	std::vector<UINT8> GenerateTextureData();
 	
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
-	Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
+	// 破棄順が重要。
+	   // C++はメンバ宣言の逆順に破棄する。
+	   // m_texture -> m_textureAllocation -> m_allocator の順に破棄したいので、この順で宣言する。
+	Microsoft::WRL::ComPtr<D3D12MA::Allocator>  m_allocator;
+	Microsoft::WRL::ComPtr<D3D12MA::Allocation> m_textureAllocation;
+	Microsoft::WRL::ComPtr<ID3D12Resource>      m_texture;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource>      m_vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
+
 	std::unique_ptr<DirectX::DescriptorHeap> m_resourceDescriptors;
 
 	
@@ -36,6 +42,6 @@ public:
 private:
 	const UINT TextureWidth = 256;
 	 const UINT TextureHeight = 256;
-	
+	 static constexpr UINT TexturePixelSize = 4; // 1ピクセルあたりのバイト数(RGBA8)
 };
 

@@ -1,13 +1,23 @@
 #include "pch.h"
+
 #include "D3D12MAHelloTexture.h"
+
 #include "EffectPipelineStateDescription.h"
-#include <vector>
 #include "DXSampleHelper.h"
+#include "VertexTypes.h"
+
+#include <vector>
 #include <string>
 #include <filesystem>
-#include "VertexTypes.h"
+
 #include <d3dcompiler.h>
+
+// DirectXTK12
+#include "ResourceUploadBatch.h"
+#include "DescriptorHeap.h"
+
 using namespace DirectX;
+
 enum Descriptors
 {
     WindowsLogo,
@@ -16,46 +26,53 @@ enum Descriptors
     GamerPic,
     Count
 };
+
 // アセットファイルのフルパスを取得するユーティリティ関数
 std::wstring GetAssetFullPath(const std::wstring& assetName)
 {
-    // 実際のプロジェクトに合わせてアセットディレクトリを指定してください
-    // 例: 実行ファイルと同じディレクトリに "assets" フォルダがある場合
     std::filesystem::path assetDir = std::filesystem::current_path() / L"assets";
     return (assetDir / assetName).wstring();
 }
 
 D3D12MAHelloTexture::D3D12MAHelloTexture(DX::DeviceResources* DR)
-
 {
-  
-
-
-	LoadAsset(DR);
-
+    LoadAsset(DR);
 }
 
-void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
+void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR)
+{
+    auto device = DR->GetD3DDevice();
 
-	auto device = DR->GetD3DDevice();
-	auto commandList = DR->GetCommandList();
-    // Create the root signature.
+    // =============================================================
+    // 1. Root Signature
+    // =============================================================
     {
         D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-
-        // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-        if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+        if (FAILED(device->CheckFeatureSupport(
+            D3D12_FEATURE_ROOT_SIGNATURE,
+            &featureData,
+            sizeof(featureData))))
         {
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
         }
 
         CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+        ranges[0].Init(
+            D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+            1,
+            0,
+            0,
+            D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC
+        );
 
         CD3DX12_ROOT_PARAMETER1 rootParameters[1];
-        rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+        rootParameters[0].InitAsDescriptorTable(
+            1,
+            &ranges[0],
+            D3D12_SHADER_VISIBILITY_PIXEL
+        );
 
         D3D12_STATIC_SAMPLER_DESC sampler = {};
         sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
@@ -73,212 +90,262 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
         CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+        rootSignatureDesc.Init_1_1(
+            _countof(rootParameters),
+            rootParameters,
+            1,
+            &sampler,
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+        );
 
         Microsoft::WRL::ComPtr<ID3DBlob> signature;
         Microsoft::WRL::ComPtr<ID3DBlob> error;
-        DX::ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-        DX::ThrowIfFailed(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+
+        DX::ThrowIfFailed(
+            D3DX12SerializeVersionedRootSignature(
+                &rootSignatureDesc,
+                featureData.HighestVersion,
+                &signature,
+                &error
+            )
+        );
+
+        DX::ThrowIfFailed(
+            device->CreateRootSignature(
+                0,
+                signature->GetBufferPointer(),
+                signature->GetBufferSize(),
+                IID_PPV_ARGS(m_rootSignature.ReleaseAndGetAddressOf())
+            )
+        );
     }
 
-    // Create the pipeline state, which includes compiling and loading shaders.
+    // =============================================================
+    // 2. Pipeline State Object
+    // =============================================================
     {
-		Microsoft::WRL::ComPtr<ID3DBlob> pVertexShaderData;
-		Microsoft::WRL::ComPtr<ID3DBlob> pPixelShaderData;
-		
-        UINT vertexShaderDataLength = 0;
-        UINT pixelShaderDataLength = 0;
+        Microsoft::WRL::ComPtr<ID3DBlob> pVertexShaderData;
+        Microsoft::WRL::ComPtr<ID3DBlob> pPixelShaderData;
+        Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 
-
-    
 #if defined(_DEBUG)
-        // Enable better shader debugging with the graphics debugging tools.
         UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
         UINT compileFlags = 0;
 #endif
 
-        D3DCompileFromFile(L"VertexShader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &pVertexShaderData, nullptr);
-        D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pPixelShaderData, nullptr);
-        // Define the vertex input layout.
+        DX::ThrowIfFailed(
+            D3DCompileFromFile(
+                L"VertexShader.hlsl",
+                nullptr,
+                nullptr,
+                "VSMain",
+                "vs_5_0",
+                compileFlags,
+                0,
+                pVertexShaderData.ReleaseAndGetAddressOf(),
+                errorBlob.ReleaseAndGetAddressOf()
+            )
+        );
+
+        errorBlob.Reset();
+
+        DX::ThrowIfFailed(
+            D3DCompileFromFile(
+                L"PixelShader.hlsl",
+                nullptr,
+                nullptr,
+                "PSMain",
+                "ps_5_0",
+                compileFlags,
+                0,
+                pPixelShaderData.ReleaseAndGetAddressOf(),
+                errorBlob.ReleaseAndGetAddressOf()
+            )
+        );
+
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
         {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+            {
+                "POSITION",
+                0,
+                DXGI_FORMAT_R32G32B32_FLOAT,
+                0,
+                0,
+                D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+                0
+            },
+            {
+                "TEXCOORD",
+                0,
+                DXGI_FORMAT_R32G32_FLOAT,
+                0,
+                12,
+                D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+                0
+            }
         };
 
-
-
-        // Describe and create the graphics pipeline state object (PSO).
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
         psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
         psoDesc.pRootSignature = m_rootSignature.Get();
+
         psoDesc.VS.pShaderBytecode = pVertexShaderData->GetBufferPointer();
         psoDesc.VS.BytecodeLength = pVertexShaderData->GetBufferSize();
+
         psoDesc.PS.pShaderBytecode = pPixelShaderData->GetBufferPointer();
         psoDesc.PS.BytecodeLength = pPixelShaderData->GetBufferSize();
+
         psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+
         psoDesc.DepthStencilState.DepthEnable = FALSE;
         psoDesc.DepthStencilState.StencilEnable = FALSE;
+
         psoDesc.SampleMask = UINT_MAX;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
         psoDesc.NumRenderTargets = 1;
         psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+
         psoDesc.SampleDesc.Count = 1;
-        DX::ThrowIfFailed(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
+        DX::ThrowIfFailed(
+            device->CreateGraphicsPipelineState(
+                &psoDesc,
+                IID_PPV_ARGS(m_pipelineState.ReleaseAndGetAddressOf())
+            )
+        );
     }
-	
-    // Create the vertex buffer.
+
+    // =============================================================
+    // 3. Vertex Buffer
+    //    小さい三角形なのでUPLOADヒープで簡略化。
+    // =============================================================
     {
-        // Define the geometry for a triangle.
         VertexPositionTexture triangleVertices[] =
         {
-            { XMFLOAT3(0.0f, 0.25f * 1.0f, 0.0f), XMFLOAT2(0.5f, 0.0f) },
-            { XMFLOAT3(0.25f * 1.0f, -0.25f * 1.0f, 0.0f), XMFLOAT2(1.0f, 1.0f) },
-            { XMFLOAT3(-0.25f * 1.0f, -0.25f * 1.0f, 0.0f), XMFLOAT2(0.0f, 1.0f) }
-		};
-       
+            {
+                DirectX::XMFLOAT3(0.0f, 0.25f, 0.0f),
+                DirectX::XMFLOAT2(0.5f, 0.0f)
+            },
+            {
+                DirectX::XMFLOAT3(0.25f, -0.25f, 0.0f),
+                DirectX::XMFLOAT2(1.0f, 1.0f)
+            },
+            {
+                DirectX::XMFLOAT3(-0.25f, -0.25f, 0.0f),
+                DirectX::XMFLOAT2(0.0f, 1.0f)
+            }
+        };
 
         const UINT vertexBufferSize = sizeof(triangleVertices);
 
-        // Note: using upload heaps to transfer static data like vert buffers is not 
-        // recommended. Every time the GPU needs it, the upload heap will be marshalled 
-        // over. Please read up on Default Heap usage. An upload heap is used here for 
-        // code simplicity and because there are very few verts to actually transfer.
-        auto upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-        auto size = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-        DX::ThrowIfFailed(device->CreateCommittedResource(
-          &upload,
-            D3D12_HEAP_FLAG_NONE,
-            &size,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            IID_PPV_ARGS(&m_vertexBuffer)));
+        auto uploadHeapProperties =
+            CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
-        // Copy the triangle data to the vertex buffer.
-        UINT8* pVertexDataBegin;
-        CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-        DX::ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+        auto vertexBufferDesc =
+            CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+
+        DX::ThrowIfFailed(
+            device->CreateCommittedResource(
+                &uploadHeapProperties,
+                D3D12_HEAP_FLAG_NONE,
+                &vertexBufferDesc,
+                D3D12_RESOURCE_STATE_GENERIC_READ,
+                nullptr,
+                IID_PPV_ARGS(m_vertexBuffer.ReleaseAndGetAddressOf())
+            )
+        );
+
+        UINT8* pVertexDataBegin = nullptr;
+
+        CD3DX12_RANGE readRange(0, 0);
+
+        DX::ThrowIfFailed(
+            m_vertexBuffer->Map(
+                0,
+                &readRange,
+                reinterpret_cast<void**>(&pVertexDataBegin)
+            )
+        );
+
         memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
+
         m_vertexBuffer->Unmap(0, nullptr);
 
-        // Initialize the vertex buffer view.
-        m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-        m_vertexBufferView.StrideInBytes = sizeof(Vertex);
+        m_vertexBufferView.BufferLocation =
+            m_vertexBuffer->GetGPUVirtualAddress();
+
+        // ここは sizeof(Vertex) ではなく、実際に使っている頂点型に合わせる。
+        m_vertexBufferView.StrideInBytes = sizeof(VertexPositionTexture);
         m_vertexBufferView.SizeInBytes = vertexBufferSize;
     }
-    
-    // 既存のCreateCommittedResource箇所を以下のように置き換えます
-    //テクスチャリソース作成
+
+    // =============================================================
+    // 4. D3D12MA Allocator
+    //    本来はDeviceResources側に1個だけ持たせるのが自然。
+    //    ここではクラス内に保持する。
+    // =============================================================
     {
-		//textureの幅と高さを指定
-		const UINT width = 256;
-		const UINT height = 256;
+        if (!m_allocator)
+        {
+            D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
+            allocatorDesc.pDevice = device;
+            allocatorDesc.pAdapter = DR->adapter.Get();
+            allocatorDesc.Flags = D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS;
 
+            DX::ThrowIfFailed(
+                D3D12MA::CreateAllocator(
+                    &allocatorDesc,
+                    m_allocator.ReleaseAndGetAddressOf()
+                )
+            );
+        }
+    }
 
-        // 1. テクスチャリソースの作成（Defaultヒープ）
-        D3D12MA::ALLOCATION_DESC texAllocDesc = {};
-        texAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+    // =============================================================
+    // 5. Texture Resource + ResourceUploadBatch
+    //    手動のUpdateSubresourcesは使わない。
+    //    したがって、このLoadAsset内でcommandListを閉じる必要もない。
+    // =============================================================
+    {
+        CD3DX12_RESOURCE_DESC textureDesc =
+            CD3DX12_RESOURCE_DESC::Tex2D(
+                DXGI_FORMAT_R8G8B8A8_UNORM,
+                TextureWidth,
+                TextureHeight
+            );
 
-        CD3DX12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, width, height);
+        D3D12MA::ALLOCATION_DESC textureAllocDesc = {};
+        textureAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-        D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
-        allocatorDesc.pDevice = device;
-		allocatorDesc.pAdapter = DR->adapter.Get(); // もしくは warpAdapter
-        allocatorDesc.Flags = D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS;
-		D3D12MA::Allocator* allocator = nullptr;
-		auto result =D3D12MA::CreateAllocator(&allocatorDesc,&allocator);
-        // D3D12MAを使用してリソースを確保
-        Microsoft::WRL::ComPtr<D3D12MA::Allocation> texAllocation;
-       
-        allocator->CreateResource(&texAllocDesc, &texDesc, D3D12_RESOURCE_STATE_COPY_DEST,
-            nullptr, &texAllocation, IID_PPV_ARGS(&m_texture));
-
-        // 2. アップロード用バッファの作成（Uploadヒープ）
-        UINT64 uploadBufferSize = 0;
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
-        device->GetCopyableFootprints(&texDesc, 0, 1, 0, &layout, nullptr, nullptr, &uploadBufferSize);
-
-        D3D12MA::ALLOCATION_DESC uploadAllocDesc = {};
-        uploadAllocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-
-        Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation;
-        Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
-		auto uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
-        allocator->CreateResource(&uploadAllocDesc, &uploadBufferDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-            &uploadAllocation, IID_PPV_ARGS(&uploadBuffer));
-
-
-		//TexturePixelSizeを定義
-		auto TexturePixelSize = 4; // DXGI_FORMAT_R8G8B8A8_UNORMの場合、1ピクセルあたり4バイト
-
-        // 4. コマンドによるコピー処理  
-        D3D12_SUBRESOURCE_DATA textureData = {};
-        textureData.pData = m_texture.GetAddressOf();
-        textureData.RowPitch = TextureWidth * TexturePixelSize;
-        textureData.SlicePitch = textureData.RowPitch * TextureHeight;
-        //m_texture 
-        UpdateSubresources(commandList, m_texture.Get(), uploadBuffer.Get(), 0, 0, 1, &textureData);
-        //中間バッファはtextureUploadHeapになる。メンバ変数にID3D12Resourceのポインタを用意する
-
-
-      
-        // -------------------------------------------------------------
-        // 1. テクスチャリソース (DEFAULTヒープ) の生成
-        // -------------------------------------------------------------
-        CD3DX12_RESOURCE_DESC textureDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-            DXGI_FORMAT_R8G8B8A8_UNORM, TextureWidth, TextureHeight);
-
-        D3D12MA::ALLOCATION_DESC defaultAllocDesc = {};
-        defaultAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-		Microsoft::WRL::ComPtr<D3D12MA::Allocation> textureAllocation = nullptr;
-        // ヘッダにある m_texture を使用
-        HRESULT hr = allocator->CreateResource(
-            &defaultAllocDesc,
-            &textureDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST, // 初期状態はコピー先
-            nullptr,
-            textureAllocation.ReleaseAndGetAddressOf(),// D3D12MA::Allocationのアドレスを取得
-            IID_PPV_ARGS(m_texture.ReleaseAndGetAddressOf())
+        DX::ThrowIfFailed(
+            m_allocator->CreateResource(
+                &textureAllocDesc,
+                &textureDesc,
+                D3D12_RESOURCE_STATE_COPY_DEST,
+                nullptr,
+                m_textureAllocation.ReleaseAndGetAddressOf(),
+                IID_PPV_ARGS(m_texture.ReleaseAndGetAddressOf())
+            )
         );
-        if (FAILED(hr)) { /* 適切なエラーハンドリング */ }
+
         m_texture->SetName(L"HelloTexture Destination Texture");
 
-        // -------------------------------------------------------------
-        // 2. アップロードバッファ (UPLOADヒープ) の生成
-        // -------------------------------------------------------------
-        const UINT64 textureuploadBufferSize = GetRequiredIntermediateSize(m_texture.Get(), 0, 1);
-        CD3DX12_RESOURCE_DESC textureuploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(textureuploadBufferSize);
-       
-        
-        // ヘッダにある uploadBuffer を使用
-        hr = allocator->CreateResource(
-            &uploadAllocDesc,
-            &textureuploadBufferDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-			uploadAllocation.ReleaseAndGetAddressOf(),// D3D12MA::Allocationのアドレスを取得
-            IID_PPV_ARGS(uploadBuffer.ReleaseAndGetAddressOf())
-        );
-        if (FAILED(hr)) { /* 適切なエラーハンドリング */ }
-        uploadBuffer->SetName(L"HelloTexture Upload Buffer");
+        std::vector<UINT8> textureData = GenerateTextureData();
 
-        // -------------------------------------------------------------
-        // 3. テクスチャデータのアップロード (ResourceUploadBatchを使用)
-        // -------------------------------------------------------------
-        // 外部実装の画像データ生成メソッドを呼び出し
-      
         D3D12_SUBRESOURCE_DATA subresourceData = {};
-        subresourceData.pData = textureData.pData;
-        subresourceData.RowPitch = TextureWidth * TexturePixelSize; // DXGI_FORMAT_R8G8B8A8_UNORM = 4 bytes per pixel
-        subresourceData.SlicePitch = subresourceData.RowPitch * TextureHeight;
+        subresourceData.pData = textureData.data();
+        subresourceData.RowPitch =
+            static_cast<LONG_PTR>(TextureWidth * TexturePixelSize);
+        subresourceData.SlicePitch =
+            static_cast<LONG_PTR>(TextureWidth * TextureHeight * TexturePixelSize);
 
         ResourceUploadBatch resourceUpload(device);
+
         resourceUpload.Begin();
 
-        // UPLOADヒープへの書き込みからDEFAULTヒープへのコピー、バリアまでをラップして実行
         resourceUpload.Upload(
             m_texture.Get(),
             0,
@@ -291,23 +358,20 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
             D3D12_RESOURCE_STATE_COPY_DEST,
             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
         );
-		auto commandQueue = DR->GetCommandQueue();
-        // コマンドキューを実行し、完了まで待機
-        auto uploadResourcesFinished = resourceUpload.End(commandQueue);
-        uploadResourcesFinished.wait();
 
-        // -------------------------------------------------------------
-        // 4. SRV の作成 (DirectXTK12 DescriptorHeap)
-        // -------------------------------------------------------------
+        auto uploadFinished = resourceUpload.End(DR->GetCommandQueue());
+        uploadFinished.wait();
+
         m_resourceDescriptors = std::make_unique<DescriptorHeap>(
             device,
             D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
             D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-            Descriptors::Count // 用意されている列挙型を使用
+            Descriptors::Count
         );
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Shader4ComponentMapping =
+            D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         srvDesc.Format = textureDesc.Format;
         srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = 1;
@@ -315,62 +379,72 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         device->CreateShaderResourceView(
             m_texture.Get(),
             &srvDesc,
-            m_resourceDescriptors->GetCpuHandle(0)
+            m_resourceDescriptors->GetCpuHandle(Descriptors::WindowsLogo)
         );
-    };
+    }
 }
 
 // Generate a simple black and white checkerboard texture.
 std::vector<UINT8> D3D12MAHelloTexture::GenerateTextureData()
 {
-	//textrepixelSizeを定義
-	const UINT TexturePixelSize = 4; // DXGI_FORMAT_R8G8B8A8_UNORMの場合、1ピクセルあたり4バイト
     const UINT rowPitch = TextureWidth * TexturePixelSize;
-    const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
-    const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
+    const UINT cellPitch = rowPitch >> 3;
+    const UINT cellHeight = TextureWidth >> 3;
     const UINT textureSize = rowPitch * TextureHeight;
 
     std::vector<UINT8> data(textureSize);
-    UINT8* pData = &data[0];
+
+    UINT8* pData = data.data();
 
     for (UINT n = 0; n < textureSize; n += TexturePixelSize)
     {
         UINT x = n % rowPitch;
         UINT y = n / rowPitch;
+
         UINT i = x / cellPitch;
         UINT j = y / cellHeight;
 
         if (i % 2 == j % 2)
         {
-            pData[n] = 0x00;        // R
-            pData[n + 1] = 0x00;    // G
-            pData[n + 2] = 0x00;    // B
-            pData[n + 3] = 0xff;    // A
+            pData[n + 0] = 0x00; // R
+            pData[n + 1] = 0x00; // G
+            pData[n + 2] = 0x00; // B
+            pData[n + 3] = 0xff; // A
         }
         else
         {
-            pData[n] = 0xff;        // R
-            pData[n + 1] = 0xff;    // G
-            pData[n + 2] = 0xff;    // B
-            pData[n + 3] = 0xff;    // A
+            pData[n + 0] = 0xff; // R
+            pData[n + 1] = 0xff; // G
+            pData[n + 2] = 0xff; // B
+            pData[n + 3] = 0xff; // A
         }
     }
 
     return data;
 }
 
-//描画する
+// 描画
 void D3D12MAHelloTexture::Render(DX::DeviceResources* DR)
 {
     auto commandList = DR->GetCommandList();
-    // Set necessary state.
+
     commandList->SetPipelineState(m_pipelineState.Get());
     commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-    ID3D12DescriptorHeap* ppHeaps[] = { m_resourceDescriptors->Heap() };
+
+    ID3D12DescriptorHeap* ppHeaps[] =
+    {
+        m_resourceDescriptors->Heap()
+    };
+
     commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-    commandList->SetGraphicsRootDescriptorTable(0, m_resourceDescriptors->GetGpuHandle(0));
+
+    commandList->SetGraphicsRootDescriptorTable(
+        0,
+        m_resourceDescriptors->GetGpuHandle(Descriptors::WindowsLogo)
+    );
+
     commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-    // Draw the triangle.
+
     commandList->DrawInstanced(3, 1, 0, 0);
 }

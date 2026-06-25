@@ -85,13 +85,21 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
     {
 		Microsoft::WRL::ComPtr<ID3DBlob> pVertexShaderData;
 		Microsoft::WRL::ComPtr<ID3DBlob> pPixelShaderData;
-		auto compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+		
         UINT vertexShaderDataLength = 0;
         UINT pixelShaderDataLength = 0;
 
-        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, pVertexShaderData.GetAddressOf() , nullptr));
-        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, pPixelShaderData.GetAddressOf() , nullptr));
 
+    
+#if defined(_DEBUG)
+        // Enable better shader debugging with the graphics debugging tools.
+        UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+        UINT compileFlags = 0;
+#endif
+
+        D3DCompileFromFile(L"VertexShader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &pVertexShaderData, nullptr);
+        D3DCompileFromFile(L"PixelShader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pPixelShaderData, nullptr);
         // Define the vertex input layout.
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
         {

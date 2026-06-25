@@ -6,6 +6,7 @@
 #include <string>
 #include <filesystem>
 #include "VertexTypes.h"
+#include <d3dcompiler.h>
 using namespace DirectX;
 enum Descriptors
 {
@@ -82,13 +83,14 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
 
     // Create the pipeline state, which includes compiling and loading shaders.
     {
-        UINT8* pVertexShaderData = nullptr;
-        UINT8* pPixelShaderData = nullptr;
+		Microsoft::WRL::ComPtr<ID3DBlob> pVertexShaderData;
+		Microsoft::WRL::ComPtr<ID3DBlob> pPixelShaderData;
+		auto compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
         UINT vertexShaderDataLength = 0;
         UINT pixelShaderDataLength = 0;
 
-        DX::ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"C:\\Users\\hatte\\source\\repos\\D3D12MA_DirectXTK12Polygon\\x64\\Debug\\shaders_VSMain.cso").c_str(), &pVertexShaderData, &vertexShaderDataLength));
-        DX::ThrowIfFailed(ReadDataFromFile(GetAssetFullPath(L"C:\\Users\\hatte\\source\\repos\\D3D12MA_DirectXTK12Polygon\\x64\\Debug\\shaders_PSMain.cso").c_str(), &pPixelShaderData, &pixelShaderDataLength));
+        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, pVertexShaderData.GetAddressOf() , nullptr));
+        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, pPixelShaderData.GetAddressOf() , nullptr));
 
         // Define the vertex input layout.
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -103,8 +105,10 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR){
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
         psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
         psoDesc.pRootSignature = m_rootSignature.Get();
-        psoDesc.VS = CD3DX12_SHADER_BYTECODE(pVertexShaderData, vertexShaderDataLength);
-        psoDesc.PS = CD3DX12_SHADER_BYTECODE(pPixelShaderData, pixelShaderDataLength);
+        psoDesc.VS.pShaderBytecode = pVertexShaderData->GetBufferPointer();
+        psoDesc.VS.BytecodeLength = pVertexShaderData->GetBufferSize();
+        psoDesc.PS.pShaderBytecode = pPixelShaderData->GetBufferPointer();
+        psoDesc.PS.BytecodeLength = pPixelShaderData->GetBufferSize();
         psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
         psoDesc.DepthStencilState.DepthEnable = FALSE;

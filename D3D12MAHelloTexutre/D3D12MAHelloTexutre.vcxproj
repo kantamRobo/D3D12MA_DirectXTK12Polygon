@@ -126,7 +126,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d12.lib;dxgi.lib;dxguid.lib;uuid.lib;kernel32.lib;user32.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3dcompiler.lib;d3d12.lib;dxgi.lib;dxguid.lib;uuid.lib;kernel32.lib;user32.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;runtimeobject.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
       <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
@@ -241,10 +241,9 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">dxc.exe -nologo -Tvs_6_0 -E"VSMain" -Zi -Qembed_debug -Fo"$(OutDir)%(Filename)_VSMain.cso" "%(FullPath)"%(FullPath)"
-dxc.exe -nologo -Tps_6_0 -E"PSMain" -Zi -Qembed_debug -Fo"$(OutDir)%(Filename)_PSMain.cso" "%(FullPath)"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Identity)</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename)_VSMain.cso;$(OutDir)%(Filename)_PSMain.cso</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">copy %(Identity) "$(OutDir)" &gt; NUL</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Performing Custom Build Tools</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\%(Identity)</Outputs>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatOutputAsContent>
     </CustomBuild>
   </ItemGroup>

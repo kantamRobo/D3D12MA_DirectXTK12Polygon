@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "D3D12MAHelloTexutre", "D3D1
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "D3D12MA_DirectXTK12_DXR_Assimp_Basic", "D3D12MA_DirectXTK12_DXR_Assimp_Basic\D3D12MA_DirectXTK12_DXR_Assimp_Basic.vcxproj", "{A97C9CBE-C047-447D-B5D1-AD367DB79167}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "D3D12MA_PathTracer", "D3D12MA_PathTracer\D3D12MA_PathTracer.vcxproj", "{057019D9-9246-489C-A834-077B94D70961}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{A97C9CBE-C047-447D-B5D1-AD367DB79167}.Release|x64.Build.0 = Release|x64
 		{A97C9CBE-C047-447D-B5D1-AD367DB79167}.Release|x86.ActiveCfg = Release|Win32
 		{A97C9CBE-C047-447D-B5D1-AD367DB79167}.Release|x86.Build.0 = Release|Win32
+		{057019D9-9246-489C-A834-077B94D70961}.Debug|x64.ActiveCfg = Debug|x64
+		{057019D9-9246-489C-A834-077B94D70961}.Debug|x64.Build.0 = Debug|x64
+		{057019D9-9246-489C-A834-077B94D70961}.Debug|x86.ActiveCfg = Debug|Win32
+		{057019D9-9246-489C-A834-077B94D70961}.Debug|x86.Build.0 = Debug|Win32
+		{057019D9-9246-489C-A834-077B94D70961}.Release|x64.ActiveCfg = Release|x64
+		{057019D9-9246-489C-A834-077B94D70961}.Release|x64.Build.0 = Release|x64
+		{057019D9-9246-489C-A834-077B94D70961}.Release|x86.ActiveCfg = Release|Win32
+		{057019D9-9246-489C-A834-077B94D70961}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

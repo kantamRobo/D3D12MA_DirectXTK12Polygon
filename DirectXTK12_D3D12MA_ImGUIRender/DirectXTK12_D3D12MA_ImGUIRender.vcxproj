@@ -179,6 +179,14 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imconfig.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_dx12.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_win32.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_internal.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imstb_rectpack.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imstb_textedit.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imstb_truetype.h" />
     <ClInclude Include="D3D12MemAlloc.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DeviceResources.h" />
@@ -188,6 +196,13 @@
     <ClInclude Include="StepTimer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_demo.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_draw.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_dx12.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_tables.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_widgets.cpp" />
     <ClCompile Include="D3D12MemAlloc.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="Game.cpp" />
@@ -209,7 +224,17 @@
   <ItemGroup>
     <Manifest Include="settings.manifest" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets" Condition="Exists('..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>このプロジェクトは、このコンピューター上にない NuGet パッケージを参照しています。それらのパッケージをダウンロードするには、[NuGet パッケージの復元] を使用します。詳細については、http://go.microsoft.com/fwlink/?LinkID=322105 を参照してください。見つからないファイルは {0} です。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\directxtk12_desktop_win10.2026.5.8.1\build\native\directxtk12_desktop_win10.targets'))" />
+  </Target>
 </Project>

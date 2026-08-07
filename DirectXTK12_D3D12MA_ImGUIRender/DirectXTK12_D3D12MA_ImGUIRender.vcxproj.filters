@@ -21,6 +21,14 @@
     <ClInclude Include="ImGUIRender.h" />
     <ClInclude Include="D3D12MemAlloc.h" />
     <ClInclude Include="d3dx12.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imconfig.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_dx12.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_internal.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imstb_rectpack.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imstb_textedit.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imstb_truetype.h" />
+    <ClInclude Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_win32.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -31,6 +39,13 @@
     </ClCompile>
     <ClCompile Include="ImGUIRender.cpp" />
     <ClCompile Include="D3D12MemAlloc.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_demo.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_draw.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_dx12.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_tables.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_widgets.cpp" />
+    <ClCompile Include="..\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends\imgui_impl_win32.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resource.rc" />
@@ -44,5 +59,8 @@
     <Manifest Include="settings.manifest">
       <Filter>Assets</Filter>
     </Manifest>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

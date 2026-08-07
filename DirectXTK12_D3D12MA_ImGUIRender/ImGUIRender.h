@@ -96,12 +96,21 @@ class ImGUIRender
 
     //ImGUIRenderのコンストラクタ
 public:
+    // アロケーションフラグを指定したカスタムバッファの作成例
+    Microsoft::WRL::ComPtr<D3D12MA::Allocation> allocation;
+	Microsoft::WRL::ComPtr<ID3D12Resource> ImGUITexture;
     void Init(DX::DeviceResources* DR)
     {
+
+        //Asは、Microsoft::WRL::ComPtrのメソッドで、COMオブジェクトのインターフェースを取得するために使用されます。
+        // Asメソッドは、指定されたインターフェースに対して、現在のCOMオブジェクトを変換し、新しいComPtrに格納します。
+		auto device = DR->GetD3DDevice();
+		Microsoft::WRL::ComPtr<ID3D12Device1> device1;
+		device1.As(&device1);
 		//CreateAllocatorを使ってAllocatorを作成するのに必要な定義書
         D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
         allocatorDesc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-        allocatorDesc.pDevice = DR->GetD3DDevice();
+		allocatorDesc.pDevice = device1.Get();
         allocatorDesc.pAdapter = nullptr;
 
     }

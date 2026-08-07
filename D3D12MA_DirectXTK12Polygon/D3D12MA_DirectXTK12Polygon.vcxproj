@@ -113,7 +113,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir);C:\Users\hatte\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA\include;C:\Users\予備PC\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA\include;C:\Users\予備PC\source\repos\D3D12MA_DirectXTK12Polygon\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);C:\Users\User\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA_DirectXTK12Polygon\third_party\imgui\backends;C:\Users\hatte\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA\include;C:\Users\予備PC\source\repos\D3D12MA_DirectXTK12Polygon\D3D12MA\include;C:\Users\予備PC\source\repos\D3D12MA_DirectXTK12Polygon\packages\Microsoft.Direct3D.DXC.1.9.2602.17\build\native\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>

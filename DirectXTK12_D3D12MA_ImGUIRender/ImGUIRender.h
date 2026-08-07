@@ -97,12 +97,21 @@ namespace D3D12MAUtils
 
 class ImGUIRender
 {
-
+	const UINT NUM_FRAMES = 2; // ダブルバッファリングのフレーム数
+    enum Descriptors
+    {
+        WindowsLogo,
+        CourierFont,
+        ControllerFont,
+        GamerPic,
+        Count
+    };
     //ImGUIRenderのコンストラクタ
 public:
     // アロケーションフラグを指定したカスタムバッファの作成例
     Microsoft::WRL::ComPtr<D3D12MA::Allocation> allocation;
 	Microsoft::WRL::ComPtr<ID3D12Resource> ImGUITexture;
+	std::unique_ptr<DirectX::DescriptorHeap> srvHeap; // ImGui用のSRVヒープ
     void Init(DX::DeviceResources* DR)
     {
 
@@ -124,13 +133,17 @@ public:
         // ========================================================================
 // ImGui 初期化コード全体 (DirectX 12 + Win32 + DirectXTK12)
 // ========================================================================
-
+        Microsoft::WRL::ComPtr<ID3D12Device> device = DR->GetD3DDevice();
+        Microsoft::WRL::ComPtr<ID3D12Device1> device1;
+        device.As(&device1);
 // 1. DirectXTK12 を活用した SRV 用 DescriptorHeap の作成
 // ※ ImGui のフォントテクスチャや ImGui::Image() 用の SRV を配置する領域です
        
-		Microsoft::WRL::ComPtr<ID3D12Device> device = DR->GetD3DDevice();
-		Microsoft::WRL::ComPtr<ID3D12Device1> device1;
-		device.As(&device1);
+		srvHeap =  std::make_unique<DirectX::DescriptorHeap>(device,
+            D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+            D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+            Descriptors::Count);
+	
         // 2. Dear ImGui コンテキストの作成
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -144,21 +157,19 @@ public:
         ImGui::StyleColorsDark(); // ダークテーマ (StyleColorsLight() や StyleColorsClassic() も利用可能)
 
 		auto hwnd = DR->GetWindow();
-		auto commandueue = DR->GetD3DCommandQueue();
+		auto commandueue = DR->GetCommandQueue();
         ImGui_ImplWin32_Init(hwnd);
 
         // 5. レンダラー (DirectX 12) バックエンドの初期化構造体の設定
         ImGui_ImplDX12_InitInfo initInfo = {};
 		initInfo.Device = device1.Get();                       // ID3D12Device1*
-		initInfo.CommandQueue = ;          // ID3D
+		initInfo.CommandQueue = DR->GetCommandQueue();          // ID3D
         initInfo.NumFramesInFlight = NUM_FRAMES;               // ダブルバッファリングなら 2
         initInfo.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM;        // レンダーターゲットのフォーマット
         initInfo.DSVFormat = DXGI_FORMAT_UNKNOWN;               // 深度バッファを使わない場合は UNKNOWN
-        initInfo.SrvDescriptorHeap = srvHeap->Heap();           // DirectXTK12で作成したヒープ
+        initInfo.SrvDescriptorHeap = srvHeap->Heap();  // DirectXTK12で作成したヒープ
 
-        // 互換用シングルディスクリプタハンドルの指定
-        initInfo.LegacySingleSrvCpuDescriptor = srvHeap->GetCpuHandle(0);
-        initInfo.LegacySingleSrvGpuDescriptor = srvHeap->GetGpuHandle(0);
+       
 
         // バックエンド初期化実行
         bool initSuccess = ImGui_ImplDX12_Init(&initInfo);

@@ -185,7 +185,7 @@ void D3D12MAHelloTexture::LoadAsset(DX::DeviceResources* DR)
                 0
             }
         };
-
+         
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
         psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
         psoDesc.pRootSignature = m_rootSignature.Get();

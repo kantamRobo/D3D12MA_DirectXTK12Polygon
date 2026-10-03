@@ -4,6 +4,11 @@
 
 #include "pch.h"
 #include "Game.h"
+#include <ScreenGrab.h>
+#include <wincodec.h>
+#include <chrono>
+#include <fstream>
+#include <iomanip>
 
 extern void ExitGame() noexcept;
 
@@ -108,6 +113,31 @@ void Game::Render()
     // Show the new frame.
     PIXBeginEvent(PIX_COLOR_DEFAULT, L"Present");
     m_deviceResources->Present();
+
+    static bool s_screenshotSaved = false;
+    if (!s_screenshotSaved && m_timer.GetFrameCount() > 5)
+    {
+        s_screenshotSaved = true;
+        m_deviceResources->WaitForGpu();
+
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+        std::tm tm;
+        localtime_s(&tm, &in_time_t);
+
+        std::ofstream ofs("capture_timestamp.txt");
+        ofs << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(3) << ms.count() << std::endl;
+        ofs.close();
+
+        DirectX::SaveWICTextureToFile(
+            m_deviceResources->GetCommandQueue(),
+            m_deviceResources->GetRenderTarget(),
+            GUID_ContainerFormatPng,
+            L"dxr_render_capture.png",
+            D3D12_RESOURCE_STATE_PRESENT,
+            D3D12_RESOURCE_STATE_PRESENT);
+    }
 
     // If using the DirectX Tool Kit for DX12, uncomment this line:
     // m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());

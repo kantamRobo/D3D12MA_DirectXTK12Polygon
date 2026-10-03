@@ -28,13 +28,13 @@ bool Model::LoadModel(const char* path)
 
 
     vertices = GenerateVertices(path);
-    // ÉXÉPÅ[ÉãílÇê›íË
+    // „Çπ„Ç±„Éº„É´ÂÄ§„ÇíË®≠ÂÆö
     float scaleFactor = 10.0f;
 
 
     for (int i = 0; i < vertices.size(); i++)
     {
-        //èÊéZÅ@vertices[i].position = vertices[i].position,100.0f;
+        //‰πóÁÆó„ÄÄvertices[i].position = vertices[i].position,100.0f;
     }
 
 
@@ -48,7 +48,7 @@ std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(c
 {
 
 
-	//aisceneÇÃì«Ç›çûÇ›
+	//aiscene„ÅÆË™≠„ÅøËæº„Åø
     Assimp::Importer importer;
 
     const aiScene* scene = importer.ReadFile(
@@ -62,7 +62,7 @@ std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(c
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         std::cerr << "Assimp error: " << importer.GetErrorString() << std::endl;
-		//èoóÕÉEÉBÉìÉhÉEÇ…ÉGÉâÅ[Çï\é¶
+		//Âá∫Âäõ„Ç¶„Ç£„É≥„Éâ„Ç¶„Å´„Ç®„É©„Éº„ÇíË°®Á§∫
 		
 		OutputDebugStringA(importer.GetErrorString());
 
@@ -100,7 +100,7 @@ std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(c
             outvertices.push_back(vertex);
         }
 
-        // ÉCÉìÉfÉbÉNÉXÇÃê›íË
+        // „Ç§„É≥„Éá„ÉÉ„ÇØ„Çπ„ÅÆË®≠ÂÆö
         for (unsigned int j = 0; j < mesh->mNumFaces; j++)
         {
             aiFace face = mesh->mFaces[j];
@@ -163,56 +163,6 @@ void Model::BuildGeometry(DX::DeviceResources* DR)
         memcpy(pData, indices.data(), static_cast<size_t>(ibSize));
         m_indexBuffer->Unmap(0, nullptr);
     }
-
-
-    // Compile the shader library.
-    std::vector<BYTE> dxilBlob;
-    void* pBytecode = nullptr;
-    SIZE_T bytecodeSize = 0;
-    CompileDXRShaderLibrary(L"AssimpRay.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
-
-    // Build the RTPSO with 5 subobjects.
-    CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
-
-    // 1. DXIL library
-    {
-        auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-        D3D12_SHADER_BYTECODE libdxil = { pBytecode, bytecodeSize };
-        lib->SetDXILLibrary(&libdxil);
-        lib->DefineExport(c_raygenShaderName);
-        lib->DefineExport(c_closestHitShaderName);
-        lib->DefineExport(c_missShaderName);
-    }
-
-    // 2. Triangle hit group (closest-hit only)
-    {
-        auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
-        hitGroup->SetClosestHitShaderImport(c_closestHitShaderName);
-        hitGroup->SetHitGroupExport(c_hitGroupName);
-        hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
-    }
-
-    // 3. Shader config
-    {
-        auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-        UINT payloadSize = 4 * sizeof(float); // float4 color
-        UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
-        shaderConfig->Config(payloadSize, attributeSize);
-    }
-
-    // 4. Global root signature
-    {
-        auto globalRootSig = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-        globalRootSig->SetRootSignature(m_globalRootSignature.Get());
-    }
-
-    // 5. Pipeline config (no secondary rays Å® max recursion = 1)
-    {
-        auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-        pipelineConfig->Config(1);
-    }
-    DX::ThrowIfFailed(m_dxrDevice->CreateStateObject(
-        raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
 }
 
 
@@ -268,7 +218,7 @@ void Model::LoadAssets(DX::DeviceResources* DR,const char* filePath)
     // Build the global root signature.
     CreateGlobalRootSignature(device);
 
-    // Compile HLSL Å® DXIL and create the raytracing PSO.
+    // Compile HLSL ‚Üí DXIL and create the raytracing PSO.
     CreateRaytracingPipelineStateObject(DR);
 
     // Create the CBV/SRV/UAV descriptor heap.
@@ -520,51 +470,39 @@ void Model::LoadCompiledShaderLibrary(
     *ppBytecode = outBlob.data();
     *pBytecodeSize = outBlob.size();
 }
-void Model::CreateRaytracingPipelineStateObject(DX::DeviceResources* DR)
+void Model::CreateRaytracingPipelineStateObject(DX::DeviceResources* /*DR*/)
 {
     std::vector<BYTE> dxilBlob;
     void* pBytecode = nullptr;
     SIZE_T bytecodeSize = 0;
-    CompileDXRShaderLibrary(L"AssimpRay.hlsl", &pBytecode, &bytecodeSize, dxilBlob);  // Build the RTPSO with 5 subobjects.
+    CompileDXRShaderLibrary(L"AssimpRay.hlsl", &pBytecode, &bytecodeSize, dxilBlob);
+
     CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
 
-    // 1. DXIL library
-    {
-        auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-        D3D12_SHADER_BYTECODE libdxil = { pBytecode, bytecodeSize };
-        lib->SetDXILLibrary(&libdxil);
-        lib->DefineExport(c_raygenShaderName);
-        lib->DefineExport(c_closestHitShaderName);
-        lib->DefineExport(c_missShaderName);
-    }
+    // 1. DXIL library & exports
+    auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+    CD3DX12_SHADER_BYTECODE libdxil(pBytecode, bytecodeSize);
+    lib->SetDXILLibrary(&libdxil);
+    LPCWSTR exports[] = { c_raygenShaderName, c_closestHitShaderName, c_missShaderName };
+    lib->DefineExports(exports);
 
-    // 2. Triangle hit group (closest-hit only)
-    {
-        auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
-        hitGroup->SetClosestHitShaderImport(c_closestHitShaderName);
-        hitGroup->SetHitGroupExport(c_hitGroupName);
-        hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
-    }
+    // 2. Triangle hit group
+    auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
+    hitGroup->SetClosestHitShaderImport(c_closestHitShaderName);
+    hitGroup->SetHitGroupExport(c_hitGroupName);
+    hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
 
-    // 3. Shader config
-    {
-        auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-        UINT payloadSize = 4 * sizeof(float); // float4 color
-        UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
-        shaderConfig->Config(payloadSize, attributeSize);
-    }
+    // 3. Shader config (payload: float4 color, attribute: float2 barycentrics)
+    raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>()
+        ->Config(4 * sizeof(float), 2 * sizeof(float));
 
     // 4. Global root signature
-    {
-        auto globalRootSig = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-        globalRootSig->SetRootSignature(m_globalRootSignature.Get());
-    }
+    raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>()
+        ->SetRootSignature(m_globalRootSignature.Get());
 
-    // 5. Pipeline config (no secondary rays Å® max recursion = 1)
-    {
-        auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-        pipelineConfig->Config(1);
-    }
+    // 5. Pipeline config (no secondary rays -> max recursion = 1)
+    raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>()
+        ->Config(1);
 
     DX::ThrowIfFailed(m_dxrDevice->CreateStateObject(
         raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
@@ -730,7 +668,7 @@ void Model::BuildAccelerationStructures(DX::DeviceResources* DR)
 
     // ---- TLAS instance descriptor (stores the sphere world-transform matrix) ----
     D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
-    // World transform: 3Å~4 row-major affine matrix.
+    // World transform: 3√ó4 row-major affine matrix.
     // Here: identity (sphere centered at origin, unit scale).
     // To translate/scale the sphere, modify these values before building the TLAS.
     instanceDesc.Transform[0][0] = 1.0f; // X-axis scale
@@ -839,7 +777,7 @@ void Model::UpdateSceneConstants(DX::DeviceResources* DR)
     XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspectRatio, 0.1f, 1000.0f);
     XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 
-    // èdóv: HLSLä˘íË(column-major)Ç…çáÇÌÇπÇƒì]íuÇµÇƒìnÇ∑
+    // ÈáçË¶Å: HLSLÊó¢ÂÆö(column-major)„Å´Âêà„Çè„Åõ„Å¶Ëª¢ÁΩÆ„Åó„Å¶Ê∏°„Åô
     m_sceneCBData.projectionToWorld = XMMatrixTranspose(XMMatrixInverse(nullptr, viewProj));
     m_sceneCBData.cameraPosition = eye;
     m_sceneCBData.lightPosition = XMVectorSet(3.0f, 5.0f, -3.0f, 1.0f);

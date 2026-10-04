@@ -243,7 +243,7 @@ void Game::CreateDeviceDependentResources()
 
     // TODO: Initialize device dependent objects here (independent of window size).
     m_model = std::make_unique<Model>();
-    m_model->LoadAssets(m_deviceResources.get(), "Untitled.obj");
+    m_model->LoadAssets(m_deviceResources.get(), "C:\\Users\\User\\source\\repos\\D3D12MA_DirectXTK12Polygon\\D3D12MA_DirectXTK12_DXR_Assimp_Basic\\untitled.obj");
 
 }
 

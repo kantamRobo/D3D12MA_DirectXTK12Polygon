@@ -517,12 +517,10 @@ void Model::CreateRaytracingPipelineStateObject(DX::DeviceResources* /*DR*/)
 // ===========================================================================
 void Model::CreateDescriptorHeap(ID3D12Device* device)
 {
-    D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-    heapDesc.NumDescriptors = SphereRaytracing::DescriptorIndex::Count;
-    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    DX::ThrowIfFailed(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_descriptorHeap)));
-    m_descriptorHeap->SetName(L"SphereRaytracingDescriptorHeap");
+
+
+    m_descriptorHeap = std::make_unique<DescriptorHeap>(device, SphereRaytracing::DescriptorIndex::Count);
+    m_descriptorHeap->Heap()->SetName(L"SphereRaytracingDescriptorHeap");
     m_descriptorSize = device->GetDescriptorHandleIncrementSize(
         D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
@@ -799,7 +797,7 @@ void Model::Render(DX::DeviceResources* DR)
     auto commandList = m_dxrCommandList.Get();
 
     // Descriptor heap
-    ID3D12DescriptorHeap* pHeaps[] = { m_descriptorHeap.Get() };
+    ID3D12DescriptorHeap* pHeaps[] = { m_descriptorHeap->Heap() };
     commandList->SetDescriptorHeaps(1, pHeaps);
 
     // Global root signature
@@ -822,7 +820,7 @@ void Model::Render(DX::DeviceResources* DR)
 
     // slot 3: Index + Vertex buffers (descriptor table, starts at heap index 1)
     auto vbGpuHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(
-        m_descriptorHeap->GetGPUDescriptorHandleForHeapStart(),
+        m_descriptorHeap->Heap()->GetGPUDescriptorHandleForHeapStart(),
         SphereRaytracing::DescriptorIndex::IndexBufferSRV,
         m_descriptorSize);
     commandList->SetComputeRootDescriptorTable(
@@ -902,7 +900,7 @@ void Model::CopyRaytracingOutputToBackbuffer(DX::DeviceResources* DR)
 UINT Model::AllocateDescriptor(
     D3D12_CPU_DESCRIPTOR_HANDLE* cpuDescriptor, UINT descriptorIndexToUse)
 {
-    auto descriptorHeapCpuBase = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    auto descriptorHeapCpuBase = m_descriptorHeap->GetFirstCpuHandle();
     if (descriptorIndexToUse == UINT_MAX)
         descriptorIndexToUse = m_descriptorsAllocated++;
     *cpuDescriptor = CD3DX12_CPU_DESCRIPTOR_HANDLE(
@@ -954,7 +952,7 @@ void Model::CreateRaytracingOutputResource(DX::DeviceResources* DR)
     // Store the GPU handle for use during ray dispatch.
     m_raytracingOutputUAVGpuDescriptor =
         CD3DX12_GPU_DESCRIPTOR_HANDLE(
-            m_descriptorHeap->GetGPUDescriptorHandleForHeapStart(),
+            m_descriptorHeap->GetFirstGpuHandle(),
             static_cast<INT>(idx), m_descriptorSize);
 
     // Register SRV descriptors for index (t1) and vertex (t2) buffers.

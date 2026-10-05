@@ -7,7 +7,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/Importer.hpp>
-
+#include <DescriptorHeap.h>
 // DXC shader compiler API (Windows SDK 10.0.17134+)
 // If your SDK is older, copy dxcapi.h from the DirectX Shader Compiler release.
 #include <atlbase.h>        // Common COM helpers.
@@ -95,7 +95,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> m_globalRootSignature;
 
     // CBV/SRV/UAV descriptor heap
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_descriptorHeap;
+    std::unique_ptr<DirectX::DescriptorHeap> m_descriptorHeap;
     UINT m_descriptorSize = 0;
     UINT m_descriptorsAllocated = 0;
 
@@ -127,7 +127,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_raytracingOutput;
     D3D12_GPU_DESCRIPTOR_HANDLE            m_raytracingOutputUAVGpuDescriptor = {};
     
-
+   
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rayGenShaderTable;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_missShaderTable;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_hitGroupShaderTable;

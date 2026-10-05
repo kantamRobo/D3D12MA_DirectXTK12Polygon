@@ -249,4 +249,3 @@ void MyMissShader(inout RayPayload payload)
     // 赤色
     payload.color = float4(1.0f, 0.0f, 0.0f, 1.0f);
 }
-}

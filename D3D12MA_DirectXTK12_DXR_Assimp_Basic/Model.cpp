@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Model.h"
+#include "dxcapi.use.h"
 #include <fstream>
 #include <iostream>
 
@@ -361,34 +362,20 @@ void Model::CompileDXRShaderLibrary(
     SIZE_T* pBytecodeSize,
     std::vector<BYTE>& outBlob)
 {
-    // Load DXC dynamically to avoid a hard link-time dependency on dxcompiler.lib.
-    static HMODULE s_hDxc = nullptr;
-    typedef HRESULT(WINAPI* PfnDxcCreateInstance)(REFCLSID, REFIID, LPVOID*);
-    static PfnDxcCreateInstance s_pfnCreate = nullptr;
+    // Use dxc::DxcDllSupport helper to dynamically load dxcompiler.dll
+    static dxc::DxcDllSupport s_dxcSupport;
+    dxc::EnsureEnabled(s_dxcSupport);
 
-    if (!s_hDxc)
-    {
-        s_hDxc = LoadLibraryW(L"dxcompiler.dll");
-        if (!s_hDxc)
-            throw std::runtime_error(
-                "Failed to load dxcompiler.dll. "
-                "Install the Windows SDK (10.0.17134+) or place dxcompiler.dll next to the exe.");
-        s_pfnCreate = reinterpret_cast<PfnDxcCreateInstance>(
-            GetProcAddress(s_hDxc, "DxcCreateInstance"));
-        if (!s_pfnCreate)
-            throw std::runtime_error("DxcCreateInstance not found in dxcompiler.dll.");
-    }
-
-    // Create DXC library and compiler instances using SDK-defined CLSIDs.
+    // Create DXC library and compiler instances via DxcDllSupport helper
     ComPtr<IDxcLibrary> dxcLibrary;
-    DX::ThrowIfFailed(s_pfnCreate(CLSID_DxcLibrary, IID_PPV_ARGS(&dxcLibrary)));
+    DX::ThrowIfFailed(s_dxcSupport.CreateInstance(CLSID_DxcLibrary, &dxcLibrary));
 
     ComPtr<IDxcCompiler> dxcCompiler;
-    DX::ThrowIfFailed(s_pfnCreate(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler)));
+    DX::ThrowIfFailed(s_dxcSupport.CreateInstance(CLSID_DxcCompiler, &dxcCompiler));
 
-    // Load the HLSL source file.
+    // Load the HLSL source file using dxc::ReadFileIntoBlob helper
     ComPtr<IDxcBlobEncoding> sourceBlob;
-    DX::ThrowIfFailed(dxcLibrary->CreateBlobFromFile(shaderPath, nullptr, &sourceBlob));
+    DX::ThrowIfFailed(dxc::ReadFileIntoBlob(s_dxcSupport, shaderPath, &sourceBlob));
 
     // Compile as a DXR shader library (lib_6_3).
     ComPtr<IDxcIncludeHandler> includeHandler;

@@ -1,5 +1,5 @@
 // AssimpRay.hlsl
-// DirectX Raytracing shader library for Assimp-loaded triangle mesh rendering.
+// DirectX Raytracing shader library for Assimp-loaded triangle mesh rendering with Lambert reflection.
 // Compile target: lib_6_3 or later
 //
 // Example:
@@ -14,12 +14,10 @@ struct SceneConstantBuffer
     // Inverse of ViewProjection matrix for ray generation.
     float4x4 projectionToWorld;
 
-    // xyz = camera world position
-    // w   = unused
+    // xyz = camera world position, w = unused
     float4 cameraPosition;
 
-    // xyz = light world position
-    // w   = unused
+    // xyz = light world position, w = unused
     float4 lightPosition;
 
     // rgba = ambient light color
@@ -29,45 +27,36 @@ struct SceneConstantBuffer
     float4 lightDiffuseColor;
 };
 
-struct SphereConstantBuffer
+// ãƒ©ãƒ³ãƒãƒ¼ãƒˆåå°„ç”¨å®šæ•°ãƒãƒƒãƒ•ã‚¡ (register b1)
+cbuffer LambertCB : register(b1)
 {
-    // rgba = base diffuse color
-    float4 albedo;
+    float4 g_lightDir;       // å…‰ã®é€²è¡Œæ–¹å‘ (xyz)
+    float4 g_lightColor;     // ãƒ©ã‚¤ãƒˆã‚«ãƒ©ãƒ¼ (rgb)
+    float4 g_materialColor;  // ãƒãƒ†ãƒªã‚¢ãƒ«ã‚«ãƒ©ãƒ¼ (rgb)
+    float4 g_ambientColor;   // ç’°å¢ƒå…‰ã‚«ãƒ©ãƒ¼ (rgb)
 };
 
 // -----------------------------------------------------------------------------
 // Vertex layout
 // -----------------------------------------------------------------------------
-//
-// C++‘¤‚Ì’¸“_\‘¢‘Ì‚àA‚±‚ÌƒŒƒCƒAƒEƒg‚É‡‚í‚¹‚éB
-// —á:
-//
-// struct Vertex
-// {
-//     DirectX::XMFLOAT3 position;
-//     DirectX::XMFLOAT3 normal;
-// };
-//
-// StructuredBuffer<Vertex> ‚Æ‚µ‚Ä“Ç‚Ş‚½‚ßAC++‘¤‚ÌStride‚Í sizeof(Vertex)B
-
+// DirectXTK12 VertexPositionNormalColorTexture ã¨ä¸€è‡´ (48 bytes)
 struct Vertex
 {
     float3 position;
     float3 normal;
+    float4 color;
+    float2 texCoord;
 };
 
 // -----------------------------------------------------------------------------
 // Global resources
 // -----------------------------------------------------------------------------
-//
-// ƒ‹[ƒgƒVƒOƒlƒ`ƒƒ‘¤‚ÌƒŒƒWƒXƒ^”Ô†‚Æˆê’v‚³‚¹‚é‚±‚ÆB
-//
 // t0 : TLAS
 // u0 : output texture
 // t1 : index buffer as ByteAddressBuffer
 // t2 : vertex buffer as StructuredBuffer<Vertex>
 // b0 : scene constant buffer
-// b1 : material/object constant buffer
+// b1 : lambert constant buffer
 
 RaytracingAccelerationStructure Scene : register(t0);
 RWTexture2D<float4>             RenderTarget : register(u0);
@@ -75,24 +64,15 @@ RWTexture2D<float4>             RenderTarget : register(u0);
 ByteAddressBuffer        Indices : register(t1);
 StructuredBuffer<Vertex> Vertices : register(t2);
 
-ConstantBuffer<SceneConstantBuffer>  g_sceneCB  : register(b0);
-ConstantBuffer<SphereConstantBuffer> g_sphereCB : register(b1);
+ConstantBuffer<SceneConstantBuffer> g_sceneCB : register(b0);
 
 // -----------------------------------------------------------------------------
 // Helper: load three packed 16-bit indices from a ByteAddressBuffer.
 // -----------------------------------------------------------------------------
-//
-// IndexBuffer‚ª DXGI_FORMAT_R16_UINT ‚Ì‘O’ñB
-// 3‚Â‚Ì16bit index‚ğAByteAddressBuffer‚©‚çæ‚èo‚·B
-
 uint3 Load3x16BitIndices(uint offsetBytes)
 {
     uint3 indices;
-
-    // ByteAddressBuffer::Load / Load2 ‚Í4byte alignment‚ª•K—vB
     const uint dwordAlignedOffset = offsetBytes & ~3u;
-
-    // 4‚Â•ª‚Ì16bit index‚ğ2‚Â‚Ìuint‚Æ‚µ‚Ä“Ç‚ŞB
     const uint2 four16BitIndices = Indices.Load2(dwordAlignedOffset);
 
     if (dwordAlignedOffset == offsetBytes)
@@ -123,25 +103,6 @@ struct RayPayload
 };
 
 // -----------------------------------------------------------------------------
-// Hit helpers
-// -----------------------------------------------------------------------------
-
-float3 HitWorldPosition()
-{
-    return WorldRayOrigin() + RayTCurrent() * WorldRayDirection();
-}
-
-float3 HitAttribute(
-    float3 vertexAttribute[3],
-    BuiltInTriangleIntersectionAttributes attr
-)
-{
-    return vertexAttribute[0]
-        + attr.barycentrics.x * (vertexAttribute[1] - vertexAttribute[0])
-        + attr.barycentrics.y * (vertexAttribute[2] - vertexAttribute[0]);
-}
-
-// -----------------------------------------------------------------------------
 // Camera ray generation
 // -----------------------------------------------------------------------------
 
@@ -156,10 +117,10 @@ inline void GenerateCameraRay(
     float2 screenPos =
         xy / DispatchRaysDimensions().xy * 2.0f - 1.0f;
 
-    // DirectX‚Ì‰æ–ÊÀ•W‚Í¶ãŒ´“_‚È‚Ì‚ÅY‚ğ”½“]B
+    // DirectXã®ç”»é¢åº§æ¨™ã¯å·¦ä¸ŠåŸç‚¹ãªã®ã§Yã‚’åè»¢
     screenPos.y = -screenPos.y;
 
-    // projectionToWorld ‚Í ViewProjection ‚Ì‹ts—ñB
+    // projectionToWorld ã¯ ViewProjection ã®é€†è¡Œåˆ—
     float4 world = mul(
         float4(screenPos, 0.0f, 1.0f),
         g_sceneCB.projectionToWorld
@@ -171,26 +132,6 @@ inline void GenerateCameraRay(
     direction = normalize(world.xyz - origin);
 }
 
-// -----------------------------------------------------------------------------
-// Lighting
-// -----------------------------------------------------------------------------
-/*
-float4 CalculateDiffuseLighting(
-    float3 hitPosition,
-    float3 normal
-)
-{
-    float3 pixelToLight =
-        normalize(g_sceneCB.lightPosition.xyz - hitPosition);
-
-    float nDotL =
-        max(0.0f, dot(pixelToLight, normal));
-
-    return g_sphereCB.albedo
-        * g_sceneCB.lightDiffuseColor
-        * nDotL;
-}
-*/
 // -----------------------------------------------------------------------------
 // Ray Generation Shader
 // -----------------------------------------------------------------------------
@@ -231,7 +172,7 @@ void MyRaygenShader()
 }
 
 // -----------------------------------------------------------------------------
-// Closest Hit Shader
+// Closest Hit Shader (ãƒ©ãƒ³ãƒãƒ¼ãƒˆåå°„ & é‡å¿ƒåº§æ¨™æ³•ç·šè£œé–“)
 // -----------------------------------------------------------------------------
 
 [shader("closesthit")]
@@ -240,39 +181,38 @@ void MyClosestHitShader(
     in MyAttributes attr
 )
 {
-    float3 hitPosition = HitWorldPosition();
+    uint primIndex = PrimitiveIndex();
 
-    // IndexBuffer‚ª uint16_t / DXGI_FORMAT_R16_UINT ‚Ì‘O’ñB
+    // 16ãƒ“ãƒƒãƒˆã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ãƒãƒƒãƒ•ã‚¡ã‹ã‚‰3é ‚ç‚¹ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’å–å¾—
     const uint indexSizeInBytes = 2;
     const uint indicesPerTriangle = 3;
-    const uint triangleIndexStride =
-        indicesPerTriangle * indexSizeInBytes;
+    const uint triangleIndexStride = indicesPerTriangle * indexSizeInBytes;
 
-    const uint baseIndex =
-        PrimitiveIndex() * triangleIndexStride;
+    const uint baseIndex = primIndex * triangleIndexStride;
+    const uint3 indices = Load3x16BitIndices(baseIndex);
 
-    const uint3 indices =
-        Load3x16BitIndices(baseIndex);
+    // å„é ‚ç‚¹ã®æ³•ç·šã‚’å–å¾—
+    float3 n0 = Vertices[indices.x].normal;
+    float3 n1 = Vertices[indices.y].normal;
+    float3 n2 = Vertices[indices.z].normal;
 
-    float3 vertexNormals[3] =
-    {
-        Vertices[indices.x].normal,
-        Vertices[indices.y].normal,
-        Vertices[indices.z].normal
-    };
+    // é‡å¿ƒåº§æ¨™ã«ã‚ˆã‚‹è£œé–“
+    float u = attr.barycentrics.x;
+    float v = attr.barycentrics.y;
+    float w = 1.0f - u - v;
+    float3 localNormal = normalize(w * n0 + u * n1 + v * n2);
 
-    float3 triangleNormal =
-        normalize(HitAttribute(vertexNormals, attr));
-/*
-    float4 diffuseColor =
-        CalculateDiffuseLighting(hitPosition, triangleNormal);
-*/
-    float4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    // ãƒ¯ãƒ¼ãƒ«ãƒ‰ç©ºé–“æ³•ç·šã¸ã®å¤‰æ›
+    float3 worldNormal = normalize(mul((float3x3)ObjectToWorld3x4(), localNormal));
 
-    
-    
+    // ãƒ©ãƒ³ãƒãƒ¼ãƒˆæ‹¡æ•£åå°„å…‰ã®ç®—å‡º
+    // å…‰æºã®é€†ãƒ™ã‚¯ãƒˆãƒ« L = normalize(-g_lightDir.xyz)
+    float3 L = normalize(-g_lightDir.xyz);
+    float NdotL = saturate(dot(worldNormal, L));
+    float3 diffuse = g_lightColor.rgb * g_materialColor.rgb * NdotL;
+    float3 ambient = g_ambientColor.rgb * g_materialColor.rgb;
 
-    payload.color = color;
+    payload.color = float4(diffuse + ambient, 1.0f);
 }
 
 // -----------------------------------------------------------------------------
@@ -282,6 +222,6 @@ void MyClosestHitShader(
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
-    //ÔF
-    payload.color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    // èƒŒæ™¯è‰²ï¼ˆæš—ã‚ã®ãƒ€ãƒ¼ã‚¯ã‚°ãƒ¬ãƒ¼ãƒ–ãƒ«ãƒ¼ï¼‰
+    payload.color = float4(0.08f, 0.08f, 0.12f, 1.0f);
 }

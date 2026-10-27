@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第二種電気工事士 配線図マスター | 四肢択一＆回路描画演習</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            denko: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#16a34a',
+              600: '#15803d',
+              700: '#166534',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .fade-in { animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .terminal-node {
+      cursor: pointer;
+      transition: r 0.15s, stroke-width 0.15s;
+    }
+    .terminal-node:hover {
+      r: 8px;
+      stroke-width: 3px;
+      filter: drop-shadow(0 0 4px rgba(22, 163, 74, 0.8));
+    }
+    .terminal-selected {
+      r: 9px;
+      stroke-width: 3px;
+      stroke: #f59e0b !important;
+      fill: #fef3c7 !important;
+      animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse {
+      from { r: 8px; }
+      to { r: 10px; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-xl shadow">
+          ⚡
+        </div>
+        <div>
+          <h1 class="text-base md:text-lg font-bold leading-tight flex items-center gap-2">
+            <span>第二種電気工事士 配線図マスター</span>
+          </h1>
+          <p class="text-[11px] text-slate-400">配線図・回路描画（複線図）演習 ・ 即時復習 ・ 解説並行学習</p>
+        </div>
+      </div>
+
+      <div class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs">
+        <button id="tabBtnQuiz" class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-emerald-600 text-white shadow">
+          <span>📝</span> 四肢択一演習 (12問)
+        </button>
+        <button id="tabBtnCircuit" class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+          <span>✏️</span> 回路を描く演習 (6題)
+        </button>
+      </div>
+
+      <div class="flex items-center flex-wrap gap-2 text-xs">
+        <label class="flex items-center cursor-pointer bg-slate-800 hover:bg-slate-700/90 px-3 py-1.5 rounded-lg border border-slate-700 transition shadow-sm select-none">
+          <input type="checkbox" id="openBookToggle" class="sr-only peer">
+          <div class="w-8 h-4 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-amber-500"></div>
+          <span class="ml-2 font-semibold text-amber-300 flex items-center gap-1">
+            <span>💡</span> <span id="openBookLabel">解説・解答を見ながら解く</span>
+          </span>
+        </label>
+
+        <div class="inline-flex rounded-md shadow-sm" role="group">
+          <button type="button" id="btnModeAll" class="px-3 py-1.5 font-medium rounded-l-lg bg-emerald-600 text-white hover:bg-emerald-700 transition">
+            全問演習
+          </button>
+          <button type="button" id="btnModeReview" class="px-3 py-1.5 font-medium rounded-r-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+            <span>🔥 要復習</span>
+            <span id="reviewBadge" class="bg-rose-500 text-white px-1.5 py-0.2 rounded-full text-[10px] font-bold">0</span>
+          </button>
+        </div>
+
+        <button id="btnResetHistory" title="学習履歴を初期化" class="text-slate-400 hover:text-rose-400 px-2 py-1 transition text-[11px]">
+          ↺ 履歴リセット
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 四肢択一セクション -->
+  <div id="quizSection" class="flex flex-col flex-1">
+    <div class="bg-white border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
+        <div class="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar text-[11px]" id="categoryFilterGroup">
+          <button data-cat="all" class="cat-btn px-2.5 py-1 rounded-md font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">全分野</button>
+          <button data-cat="器具図記号" class="cat-btn px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">器具図記号</button>
+          <button data-cat="材料・工具の鑑別" class="cat-btn px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">材料・工具</button>
+          <button data-cat="複線図と結線" class="cat-btn px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">複線図・結線</button>
+          <button data-cat="配線設計・計算" class="cat-btn px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">配線設計・計算</button>
+          <button data-cat="測定・検査" class="cat-btn px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">測定・検査</button>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <span id="progressText" class="font-bold text-slate-800">第 1 問 / 全 12 問</span>
+            <div class="w-20 sm:w-32 bg-slate-200 rounded-full h-2 overflow-hidden">
+              <div id="progressBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 8%"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 border-l border-slate-200 pl-3">
+            <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> 正解: <b id="statCorrect" class="text-emerald-600">0</b></span>
+            <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> 不正解: <b id="statWrong" class="text-rose-600">0</b></span>
+            <span class="inline-flex items-center gap-1 font-bold">率: <span id="statAccuracy" class="text-slate-800">0%</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 py-4 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <section class="lg:col-span-7 flex flex-col gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex flex-col gap-4">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="categoryBadge" class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-semibold">器具図記号</span>
+              <span id="questionIdBadge" class="text-xs text-slate-400 font-mono font-bold">Q1</span>
+              <span id="wrongMarkBadge" class="hidden bg-rose-100 text-rose-700 text-xs px-2 py-0.5 rounded font-bold">⚠ 要復習</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <button id="btnPrev" class="px-2.5 py-1 text-xs font-medium rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition">◀ 前へ</button>
+              <button id="btnNext" class="px-2.5 py-1 text-xs font-medium rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition">次へ ▶</button>
+            </div>
+          </div>
+          <div>
+            <h2 id="questionTitle" class="text-base md:text-lg font-bold text-slate-900 mb-1.5">問題タイトル</h2>
+            <p id="questionText" class="text-sm md:text-base text-slate-700 leading-relaxed bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">問題文</p>
+          </div>
+          <div class="relative bg-slate-50 border border-slate-200 rounded-lg p-2.5 overflow-hidden flex flex-col items-center justify-center min-h-[220px]">
+            <div class="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+              <button id="btnZoomDiagram" title="図面を拡大表示" class="bg-white/90 backdrop-blur border border-slate-300 hover:bg-white text-slate-700 px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm transition flex items-center gap-1">
+                <span>🔍</span> 拡大表示
+              </button>
+            </div>
+            <div id="diagramContainer" class="w-full flex justify-center items-center max-w-[480px]"></div>
+          </div>
+          <div class="flex flex-col gap-2 mt-1">
+            <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex justify-between items-center">
+              <span>選択肢を選んで解答（キーボード 1〜4 キー対応）</span>
+              <span class="text-slate-400 text-[10px]">クリックで判定</span>
+            </div>
+            <div id="optionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
+          </div>
+          <div id="feedbackBox" class="hidden p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 fade-in">
+            <div class="flex items-center gap-3">
+              <span id="feedbackIcon" class="text-2xl">⭕</span>
+              <div>
+                <p id="feedbackTitle" class="font-bold text-sm">正解！</p>
+                <p id="feedbackSub" class="text-xs text-slate-600">ナイス回答です！</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btnRetryCurrent" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-3.5 py-2 rounded-lg border border-slate-300 font-bold transition shadow-sm flex items-center gap-1">
+                <span>🔄</span> もう一度解く
+              </button>
+              <button id="btnNextFromFeedback" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2 rounded-lg font-bold shadow transition flex items-center gap-1">
+                <span>次の問題へ</span> <span>▶</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lg:col-span-5 flex flex-col gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex flex-col gap-3.5 sticky top-16">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+            <h3 class="font-bold text-sm md:text-base text-slate-800 flex items-center gap-1.5">
+              <span class="text-emerald-600">📖</span>
+              <span>解説と解答</span>
+            </h3>
+            <span id="openBookIndicator" class="hidden text-[11px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span>💡</span> オープンブック表示中
+            </span>
+          </div>
+          <div id="explanationLocked" class="py-12 text-center text-slate-400 text-sm flex flex-col items-center gap-3">
+            <span class="text-4xl">🔒</span>
+            <div>
+              <p class="font-semibold text-slate-600">選択肢を選ぶと詳細解説が表示されます</p>
+              <p class="text-xs text-slate-400 mt-1">解答後、間違えた問題は自動で復習リストに登録されます。</p>
+            </div>
+          </div>
+          <div id="explanationContent" class="hidden flex flex-col gap-3.5 text-sm leading-relaxed fade-in">
+            <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <span class="text-[11px] font-bold text-emerald-800 uppercase tracking-wide">正解の選択肢</span>
+              <div id="correctOptionText" class="text-sm md:text-base font-bold text-emerald-950 mt-0.5">イ. ○○○</div>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-700 text-xs uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <span>💡</span> ポイント・解き方解説
+              </h4>
+              <div id="explanationText" class="text-slate-700 space-y-2 text-xs md:text-sm leading-relaxed whitespace-pre-line bg-slate-50 p-3 rounded-lg border border-slate-100"></div>
+            </div>
+            <div class="bg-amber-50/70 border border-amber-200 rounded-lg p-3">
+              <h5 class="text-xs font-bold text-amber-900 flex items-center gap-1 mb-1.5">
+                <span>⭐</span> 試験に出る要点チートシート
+              </h5>
+              <div id="cheatSheetText" class="text-xs text-amber-900 leading-normal whitespace-pre-line font-mono bg-white/60 p-2.5 rounded border border-amber-200/60"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 回路を描く演習セクション -->
+  <div id="circuitSection" class="hidden flex flex-col flex-1">
+    <div class="bg-white border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-3">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar text-[11px]" id="circuitListGroup"></div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="inline-flex rounded-lg border border-slate-300 p-0.5 bg-slate-100 text-xs">
+            <button id="btnToolWire" class="px-2.5 py-1 rounded-md font-bold bg-white text-emerald-700 shadow-sm transition flex items-center gap-1">
+              <span>🔌</span> 端子結線モード
+            </button>
+            <button id="btnToolPen" class="px-2.5 py-1 rounded-md font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1">
+              <span>✏️</span> 自由メモ手描き
+            </button>
+          </div>
+          <div id="wireColorPalette" class="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg">
+            <span class="text-[10px] text-slate-500 font-semibold mr-1">電線色:</span>
+            <button data-color="#1e293b" class="wire-color-btn w-5 h-5 rounded-full bg-slate-900 ring-2 ring-emerald-500 transition" title="黒線"></button>
+            <button data-color="#3b82f6" class="wire-color-btn w-5 h-5 rounded-full bg-blue-500 hover:opacity-80 transition" title="白線（青表示）"></button>
+            <button data-color="#ef4444" class="wire-color-btn w-5 h-5 rounded-full bg-red-500 hover:opacity-80 transition" title="赤線"></button>
+            <button data-color="#10b981" class="wire-color-btn w-5 h-5 rounded-full bg-emerald-500 hover:opacity-80 transition" title="緑線"></button>
+          </div>
+          <div class="flex items-center gap-1">
+            <button id="btnUndoWire" class="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-semibold">↩ 取消</button>
+            <button id="btnClearCanvas" class="px-2.5 py-1 rounded border border-rose-300 hover:bg-rose-50 text-rose-700 text-xs font-semibold">🗑️ 全消去</button>
+            <button id="btnCheckCircuit" class="px-3.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition flex items-center gap-1">
+              <span>✅</span> 答え合わせ
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 py-4 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <section class="lg:col-span-7 flex flex-col gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col gap-3">
+          <div class="flex justify-between items-center">
+            <div>
+              <span id="circuitCategoryBadge" class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-0.5 rounded-full font-bold">回路を描く実戦演習</span>
+              <h2 id="circuitTitle" class="text-base md:text-lg font-bold text-slate-900 mt-1">基本片切回路の複線図作成</h2>
+            </div>
+            <div class="flex items-center gap-1">
+              <button id="btnCircuitPrev" class="px-2.5 py-1 text-xs font-medium rounded border border-slate-200 hover:bg-slate-50 transition">◀ 前の回路</button>
+              <button id="btnCircuitNext" class="px-2.5 py-1 text-xs font-medium rounded border border-slate-200 hover:bg-slate-50 transition">次の回路 ▶</button>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <div class="flex justify-between items-center text-xs font-bold text-slate-700 mb-1">
+              <span class="flex items-center gap-1"><span>📐</span> 【問題の単線図】この回路を複線図に結線してください</span>
+              <span class="text-slate-400 text-[10px]">端子をクリックして接続</span>
+            </div>
+            <div id="circuitSingleLineContainer" class="flex justify-center items-center max-h-[140px] overflow-hidden"></div>
+          </div>
+
+          <div class="relative bg-slate-950 rounded-xl overflow-hidden border-2 border-slate-800 shadow-inner min-h-[380px] flex items-center justify-center select-none" id="canvasWrapper">
+            <div class="absolute top-2 left-3 text-[11px] text-slate-400 pointer-events-none z-10 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span id="circuitCanvasHelp">端子（丸印）をクリックし、つなぐ相手の端子をクリックして結線します</span>
+            </div>
+            <div id="guideOverlayBadge" class="hidden absolute top-2 right-3 bg-amber-500/90 text-white font-bold text-[10px] px-2.5 py-0.5 rounded-full backdrop-blur z-10 flex items-center gap-1">
+              <span>💡</span> 模範結線ガイド表示中（なぞり書き可能）
+            </div>
+
+            <svg id="circuitSvgLayer" class="w-full h-[380px]" viewBox="0 0 600 380">
+              <defs>
+                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.8"/>
+                </pattern>
+              </defs>
+              <rect width="600" height="380" fill="#090d16"/>
+              <rect width="600" height="380" fill="url(#grid)"/>
+              <g id="guideLinesGroup" class="hidden opacity-50" stroke-dasharray="4,4"></g>
+              <g id="userWiresGroup"></g>
+              <g id="componentsGroup"></g>
+            </svg>
+
+            <canvas id="memoCanvas" width="600" height="380" class="absolute inset-0 pointer-events-none z-20"></canvas>
+          </div>
+
+          <div id="circuitFeedbackBox" class="hidden p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 fade-in">
+            <div class="flex items-center gap-3">
+              <span id="circuitFeedbackIcon" class="text-2xl">⭕</span>
+              <div>
+                <p id="circuitFeedbackTitle" class="font-bold text-sm">結線成功！完璧な複線図です！</p>
+                <p id="circuitFeedbackSub" class="text-xs text-slate-600">右ペインでリングスリーブ圧着マークと結線ステップを確認しましょう。</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btnRetryCircuit" class="bg-white hover:bg-slate-100 text-slate-700 text-xs px-3.5 py-2 rounded-lg border border-slate-300 font-bold transition shadow-sm flex items-center gap-1">
+                <span>🔄</span> もう一度描く
+              </button>
+              <button id="btnNextCircuitFromFeedback" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2 rounded-lg font-bold shadow transition flex items-center gap-1">
+                <span>次の回路へ</span> <span>▶</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="lg:col-span-5 flex flex-col gap-4">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5 flex flex-col gap-3.5 sticky top-16">
+          <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+            <h3 class="font-bold text-sm md:text-base text-slate-800 flex items-center gap-1.5">
+              <span class="text-emerald-600">📐</span>
+              <span>複線図の模範解答と解説</span>
+            </h3>
+            <span id="circuitOpenBookBadge" class="hidden text-[11px] bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span>💡</span> 見本ガイドON
+            </span>
+          </div>
+
+          <div id="circuitExplanationLocked" class="py-12 text-center text-slate-400 text-sm flex flex-col items-center gap-3">
+            <span class="text-4xl">🔌</span>
+            <div>
+              <p class="font-semibold text-slate-600">回路を結線して「答え合わせ」を押すと、<br>模範複線図とステップ解説が表示されます</p>
+              <p class="text-xs text-slate-400 mt-1.5">
+                画面右上の「解説・解答を見ながら解く」をONにすると、<br>
+                キャンバスに模範結線が薄くガイド表示され、なぞり書きで学べます！
+              </p>
+            </div>
+          </div>
+
+          <div id="circuitExplanationContent" class="hidden flex flex-col gap-3.5 text-sm leading-relaxed fade-in">
+            <div class="bg-slate-900 rounded-lg p-2 flex flex-col items-center justify-center border border-slate-800">
+              <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1 self-start">完成模範複線図</span>
+              <div id="modelCircuitDiagramContainer" class="w-full flex justify-center items-center max-h-[160px]"></div>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-700 text-xs uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <span>📝</span> 複線図の思考 4ステップ手順
+              </h4>
+              <div id="circuitStepsList" class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs space-y-2"></div>
+            </div>
+            <div class="bg-amber-50/70 border border-amber-200 rounded-lg p-3">
+              <h5 class="text-xs font-bold text-amber-900 flex items-center gap-1 mb-1.5">
+                <span>⭐</span> ジョイント部のリングスリーブ刻印判定
+              </h5>
+              <div id="circuitSleeveSummary" class="text-xs text-amber-900 leading-normal whitespace-pre-line font-mono bg-white/60 p-2.5 rounded border border-amber-200/60"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="diagramModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scale">
+      <div class="p-3.5 bg-slate-900 text-white flex justify-between items-center">
+        <h4 class="font-bold text-sm flex items-center gap-2"><span>🔍</span> 配線図の拡大表示</h4>
+        <button id="btnCloseModal" class="text-slate-400 hover:text-white text-xl font-bold px-2 py-0.5 rounded transition">✕</button>
+      </div>
+      <div id="modalDiagramBody" class="p-6 overflow-auto flex items-center justify-center min-h-[350px] bg-slate-50"></div>
+      <div class="p-3 bg-slate-100 border-t border-slate-200 text-center text-xs text-slate-500">※Escキーまたは右上の✕ボタンで閉じます</div>
+    </div>
+  </div>
+
+  <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500 mt-auto">
+    第二種電気工事士 配線図マスター | 湯川開発チーム 検証プログラム
+  </footer>
+
+  <script src="questions_data.js"></script>
+
+  <script>
+    // ----------------------------------------------------
+    // 1. 四肢択一問題データ (全12問内包)
+    // ----------------------------------------------------
+    const EMBEDDED_QUESTIONS = [
+      {
+        id: "q1", category: "器具図記号", title: "点滅器の傍記表示（ホタルスイッチ）",
+        question: "図の単線図において、①で示す点滅器（スイッチ）の名称および機能として、正しいものはどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">配線図（単線図抜粋）</text>
+          <line x1="40" y1="90" x2="160" y2="90" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="35" y="80" font-family="sans-serif" font-size="11" fill="#475569">電源 100V</text>
+          <circle cx="40" cy="90" r="4" fill="#1e293b"/>
+          <line x1="160" y1="90" x2="260" y2="90" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="260" cy="90" r="14" fill="#ffffff" stroke="#1e293b" stroke-width="2.5"/>
+          <line x1="250" y1="80" x2="270" y2="100" stroke="#1e293b" stroke-width="2"/>
+          <line x1="250" y1="100" x2="270" y2="80" stroke="#1e293b" stroke-width="2"/>
+          <text x="282" y="94" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0f172a">イ</text>
+          <line x1="160" y1="90" x2="160" y2="140" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="160" cy="140" r="7" fill="#0f172a"/>
+          <text x="172" y="145" font-family="sans-serif" font-size="14" font-weight="bold" fill="#0284c7">H</text>
+          <text x="190" y="145" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0f172a">イ</text>
+          <g>
+            <circle cx="160" cy="140" r="13" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <path d="M 145 140 L 95 140" stroke="#ef4444" stroke-width="1.5"/>
+            <circle cx="80" cy="140" r="12" fill="#ef4444"/>
+            <text x="80" y="145" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">①</text>
+          </g>
+        </svg>`,
+        options: [
+          { text: "イ. 確認表示灯内蔵スイッチ（パイロットランプ）で、負荷の点灯時に内蔵ランプが点灯する。", isCorrect: false },
+          { text: "ロ. 位置表示灯内蔵スイッチ（ホタルスイッチ）で、負荷の消灯時に内蔵ランプが点灯する。", isCorrect: true },
+          { text: "ハ. 遅れスイッチで、消灯操作を行った後もしばらく点灯を維持して自動消灯する。", isCorrect: false },
+          { text: "ニ. 調光器で、つまみを操作して照明器具の明るさを連続的に可変調節する。", isCorrect: false }
+        ],
+        answerIndex: 1,
+        explanation: `【正解】ロ\n● 黒丸の点滅器記号の横に「H」が記載されているものは「位置表示灯内蔵スイッチ（通称：ホタルスイッチ）」です。暗い部屋でもスイッチの位置が分かるよう、照明器具が【消灯しているとき】に内蔵されたランプが点灯します。`,
+        cheatSheet: `【点滅器の傍記記号】\n・[ H ]：ホタル（位置表示灯） ➔ 【消灯時】に点灯\n・[ L ]：パイロット（確認表示灯） ➔ 【点灯時】に点灯\n・[ 3 ]：3路スイッチ\n・[ 4 ]：4路スイッチ`
+      },
+      {
+        id: "q2", category: "器具図記号", title: "コンセントの図記号と傍記（屋外用コンセント）",
+        question: "図の配線図において、②で示すコンセントの図記号と傍記の組み合わせとして、正しいものはどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">建物外壁部 配線図抜粋</text>
+          <line x1="140" y1="35" x2="140" y2="165" stroke="#94a3b8" stroke-width="4" stroke-dasharray="8,4"/>
+          <text x="75" y="50" font-family="sans-serif" font-size="11" fill="#64748b">【屋内】</text>
+          <text x="160" y="50" font-family="sans-serif" font-size="11" fill="#64748b">【屋外】</text>
+          <line x1="80" y1="100" x2="140" y2="100" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="170" cy="100" r="16" fill="#ffffff" stroke="#1e293b" stroke-width="2.5"/>
+          <line x1="162" y1="92" x2="162" y2="108" stroke="#1e293b" stroke-width="2"/>
+          <line x1="178" y1="92" x2="178" y2="108" stroke="#1e293b" stroke-width="2"/>
+          <text x="195" y="95" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0284c7">WP</text>
+          <text x="195" y="112" font-family="sans-serif" font-size="12" font-weight="bold" fill="#16a34a">E  ET</text>
+          <g>
+            <circle cx="170" cy="100" r="22" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3,3"/>
+            <path d="M 170 125 L 170 150 L 220 150" stroke="#ef4444" stroke-width="1.5"/>
+            <circle cx="235" cy="150" r="12" fill="#ef4444"/>
+            <text x="235" y="155" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">②</text>
+          </g>
+        </svg>`,
+        options: [
+          { text: "イ. 抜け止め形・接地極付コンセント", isCorrect: false },
+          { text: "ロ. 医用・接地端子付コンセント", isCorrect: false },
+          { text: "ハ. 防雨型・接地極付・接地端子付コンセント", isCorrect: true },
+          { text: "ニ. 漏電遮断器付・防雨型コンセント", isCorrect: false }
+        ],
+        answerIndex: 2,
+        explanation: `【正解】ハ\n・WP: 防雨型 (Waterproof)\n・E: 接地極付 (アース穴)\n・ET: 接地端子付 (ねじ端子)\nすべて併記されているため「防雨型・接地極付・接地端子付コンセント」です。`,
+        cheatSheet: `【コンセント傍記】\n・WP: 防雨型\n・E: 接地極付\n・ET: 接地端子付\n・LK: 抜け止め形\n・EL: 漏電遮断器付`
+      },
+      {
+        id: "q3", category: "器具図記号", title: "引掛シーリング・埋込器具の図記号",
+        question: "図に示す配線器具の図記号において、③（角形引掛シーリング）および④（ダウンライト）の組み合わせとして、正しいものはどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">居室・廊下の天井配線図</text>
+          <line x1="50" y1="90" x2="270" y2="90" stroke="#1e293b" stroke-width="2.5"/>
+          <rect x="90" y="75" width="30" height="30" fill="#ffffff" stroke="#1e293b" stroke-width="2.5"/>
+          <path d="M 96 85 L 104 85 L 104 95" fill="none" stroke="#1e293b" stroke-width="2"/>
+          <path d="M 114 95 L 114 85 L 106 85" fill="none" stroke="#1e293b" stroke-width="2"/>
+          <circle cx="210" cy="90" r="16" fill="#ffffff" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="210" y="95" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">DL</text>
+          <g>
+            <path d="M 105 110 L 105 140 L 75 140" stroke="#ef4444" stroke-width="1.5"/>
+            <circle cx="60" cy="140" r="12" fill="#ef4444"/>
+            <text x="60" y="145" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">③</text>
+          </g>
+          <g>
+            <path d="M 210 110 L 210 140 L 240 140" stroke="#ef4444" stroke-width="1.5"/>
+            <circle cx="255" cy="140" r="12" fill="#ef4444"/>
+            <text x="255" y="145" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ffffff" text-anchor="middle">④</text>
+          </g>
+        </svg>`,
+        options: [
+          { text: "イ. ③ 角形引掛シーリング ／ ④ ダウンライト（埋込器具）", isCorrect: true },
+          { text: "ロ. ③ 丸形引掛シーリング ／ ④ シャンデリア", isCorrect: false },
+          { text: "ハ. ③ 引掛ローゼット ／ ④ ペンダントライト", isCorrect: false },
+          { text: "ニ. ③ コンセント ／ ④ シーリングライト（直付器具）", isCorrect: false }
+        ],
+        answerIndex: 0,
+        explanation: `【正解】イ\n・長方形枠＋引掛爪 ➔ 【角形引掛シーリング】\n・丸枠 ＋ DL ➔ 【ダウンライト（Down Light）】です。`,
+        cheatSheet: `【照明・引掛器具】\n・長方形＋爪: 角形引掛シーリング\n・円＋爪: 丸形引掛シーリング\n・DL: ダウンライト\n・CH: シャンデリア`
+      },
+      {
+        id: "q4", category: "材料・工具の鑑別", title: "金属管工事に使用する曲げ工具（パイプベンダ）",
+        question: "金属管工事において、写真（図）に示す工具の名称および主な用途の組み合わせとして、適切なものはどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">工具鑑別イラスト</text>
+          <g transform="translate(60, 20)">
+            <line x1="170" y1="20" x2="60" y2="105" stroke="#475569" stroke-width="7" stroke-linecap="round"/>
+            <line x1="170" y1="20" x2="60" y2="105" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+            <rect x="160" y="12" width="25" height="12" rx="3" fill="#0284c7" transform="rotate(-38 172 18)"/>
+            <path d="M 40 100 Q 55 130 95 125 L 85 140 Q 40 145 25 105 Z" fill="#334155" stroke="#1e293b" stroke-width="1.5"/>
+            <rect x="85" y="128" width="30" height="10" rx="2" fill="#64748b"/>
+            <circle cx="36" cy="100" r="7" fill="#0f172a"/>
+            <path d="M 15 100 L 36 100 Q 60 105 80 135 L 100 160" fill="none" stroke="#cbd5e1" stroke-width="6" stroke-linecap="round"/>
+          </g>
+        </svg>`,
+        options: [
+          { text: "イ. ノックアウトパンチャ：鋼板に丸穴を開ける。", isCorrect: false },
+          { text: "ロ. パイプベンダ：金属電線管を直角などに曲げ加工する。", isCorrect: true },
+          { text: "ハ. クリックボール：管内側の切断バリ取りを行う。", isCorrect: false },
+          { text: "ニ. ボルトクリッパ：全ねじボルトや電線を素早く切断する。", isCorrect: false }
+        ],
+        answerIndex: 1,
+        explanation: `【正解】ロ\n図の工具は足で踏んでレバーを引いて金属電線管（E管やC管）を曲げる【パイプベンダ】です。`,
+        cheatSheet: `【金属管工具】\n・パイプベンダ: 管の曲げ加工\n・クリックボール＋リーマ: バリ取り\n・ノックアウトパンチャ: 穴あけ`
+      },
+      {
+        id: "q5", category: "材料・工具の鑑別", title: "アウトレットボックス接続部材（絶縁ブッシング）",
+        question: "金属管をアウトレットボックスに接続する際、金属管の端部（ボックス内側）に取り付けて通線時に電線の絶縁被覆を保護するために使用する材料はどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">ボックス結合部の断面構成</text>
+          <rect x="140" y="40" width="12" height="100" fill="#94a3b8"/>
+          <rect x="30" y="70" width="110" height="40" fill="#e2e8f0" stroke="#475569" stroke-width="2"/>
+          <rect x="120" y="64" width="18" height="52" rx="2" fill="#64748b" stroke="#334155" stroke-width="1.5"/>
+          <rect x="140" y="72" width="30" height="36" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/>
+          <rect x="154" y="64" width="14" height="52" rx="2" fill="#64748b" stroke="#334155" stroke-width="1.5"/>
+          <g>
+            <path d="M 170 66 L 186 66 L 192 76 L 192 104 L 186 114 L 170 114 Z" fill="#0284c7" stroke="#0369a1" stroke-width="2"/>
+            <text x="202" y="94" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0284c7">【 ？ 】</text>
+          </g>
+        </svg>`,
+        options: [
+          { text: "イ. ロックナット（六角ナット）", isCorrect: false },
+          { text: "ロ. 絶縁ブッシング", isCorrect: true },
+          { text: "ハ. リングレジューサ", isCorrect: false },
+          { text: "ニ. ノーマルベンド", isCorrect: false }
+        ],
+        answerIndex: 1,
+        explanation: `【正解】ロ\n管の切り口のバリで電線が傷つくのを防ぐため、管端のねじ部に取り付ける部材が【絶縁ブッシング】です。`,
+        cheatSheet: `【ボックス部材】\n・絶縁ブッシング: 電線被覆保護\n・ロックナット: 挟み込んで固定\n・リングレジューサ: 穴径のサイズ調整`
+      },
+      {
+        id: "q6", category: "複線図と結線", title: "3路スイッチ回路のボックス間通過心線数",
+        question: "図の単線図において、ジョイントボックスAとジョイントボックスBの間を通る電線（ケーブル）の最小心線数として、正しいものはどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">3路スイッチ回路（階段・廊下）</text>
+          <line x1="30" y1="80" x2="90" y2="80" stroke="#1e293b" stroke-width="2.5"/>
+          <rect x="90" y="60" width="40" height="40" fill="#f1f5f9" stroke="#1e293b" stroke-width="2"/>
+          <text x="110" y="85" font-family="sans-serif" font-size="12" font-weight="bold" fill="#1e293b" text-anchor="middle">A</text>
+          <line x1="110" y1="100" x2="110" y2="140" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="110" cy="140" r="7" fill="#0f172a"/>
+          <text x="122" y="145" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0284c7">3</text>
+          <line x1="130" y1="80" x2="200" y2="80" stroke="#ef4444" stroke-width="3"/>
+          <text x="165" y="72" font-family="sans-serif" font-size="13" font-weight="bold" fill="#ef4444" text-anchor="middle">？心</text>
+          <rect x="200" y="60" width="40" height="40" fill="#f1f5f9" stroke="#1e293b" stroke-width="2"/>
+          <text x="220" y="85" font-family="sans-serif" font-size="12" font-weight="bold" fill="#1e293b" text-anchor="middle">B</text>
+          <line x1="220" y1="100" x2="220" y2="140" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="220" cy="140" r="7" fill="#0f172a"/>
+          <text x="232" y="145" font-family="sans-serif" font-size="13" font-weight="bold" fill="#0284c7">3</text>
+          <line x1="220" y1="60" x2="220" y2="30" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="220" cy="20" r="12" fill="#ffffff" stroke="#1e293b" stroke-width="2"/>
+          <text x="238" y="24" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0f172a">イ</text>
+        </svg>`,
+        options: [
+          { text: "イ. 2心", isCorrect: false },
+          { text: "ロ. 3心", isCorrect: true },
+          { text: "ハ. 4心", isCorrect: false },
+          { text: "ニ. 5心", isCorrect: false }
+        ],
+        answerIndex: 1,
+        explanation: `【正解】ロ\nA-B間を通過するのは【接地側白線 1本】＋【3路渡り線 2本】＝【合計 3心（3本）】です。`,
+        cheatSheet: `【3路スイッチ回路】\n電源側3路0番 ➔ 電源黒\n負荷側3路0番 ➔ 照明器具へ\n3路同士の1番・3番 ➔ 【渡り線2本】`
+      },
+      {
+        id: "q7", category: "複線図と結線", title: "リングスリーブ圧着マーク（刻印）の判定",
+        question: "図に示すジョイントボックス内の電線接続において、直径1.6mmのVVF用電線3本をリングスリーブで圧着接続するとき、使用するリングスリーブの種類と圧着マーク（刻印）の組み合わせとして、正しいものはどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">ジョイントボックス内の接続部</text>
+          <path d="M 60 70 C 110 70 140 100 170 100" fill="none" stroke="#0284c7" stroke-width="3"/>
+          <path d="M 60 100 C 110 100 140 100 170 100" fill="none" stroke="#0284c7" stroke-width="3"/>
+          <path d="M 60 130 C 110 130 140 100 170 100" fill="none" stroke="#0284c7" stroke-width="3"/>
+          <rect x="170" y="91" width="22" height="18" rx="2" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>
+          <circle cx="181" cy="100" r="4" fill="#334155"/>
+          <text x="181" y="104" font-family="sans-serif" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">？</text>
+          <line x1="192" y1="100" x2="208" y2="100" stroke="#b45309" stroke-width="4" stroke-linecap="round"/>
+        </svg>`,
+        options: [
+          { text: "イ. リングスリーブ：小 ／ 圧着マーク：○（極小）", isCorrect: false },
+          { text: "ロ. リングスリーブ：小 ／ 圧着マーク：小", isCorrect: true },
+          { text: "ハ. リングスリーブ：中 ／ 圧着マーク：小", isCorrect: false },
+          { text: "ニ. リングスリーブ：中 ／ 圧着マーク：中", isCorrect: false }
+        ],
+        answerIndex: 1,
+        explanation: `【正解】ロ\n1.6mm × 3本はリングスリーブ【小】、刻印【小】です。\n※「○（極小）」は【1.6mm × 2本だけ】の専用刻印です！`,
+        cheatSheet: `【リングスリーブ刻印】\n・1.6mm × 2本 ➔ スリーブ「小」・刻印【 ○ 】\n・1.6mm × 3〜4本 ➔ スリーブ「小」・刻印【 小 】\n・2.0mm × 1本＋1.6mm × 1〜2本 ➔ スリーブ「小」・刻印【 小 】`
+      },
+      {
+        id: "q8", category: "複線図と結線", title: "差込形コネクタの極数と使用個数の算定",
+        question: "あるジョイントボックスにおいて、結線図の指定通り接地側4本、非接地側3本、点滅線イ2本、点滅線ロ2本を接続する。差込形コネクタの最小個数はどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <text x="15" y="24" font-family="sans-serif" font-size="11" fill="#64748b" font-weight="bold">差込形コネクタ 結線グループ</text>
+          <rect x="25" y="45" width="80" height="40" rx="4" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+          <text x="65" y="62" font-family="sans-serif" font-size="11" font-weight="bold" fill="#1d4ed8" text-anchor="middle">接地側 (白)</text>
+          <text x="65" y="78" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">4本接続</text>
+          <rect x="120" y="45" width="80" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+          <text x="160" y="62" font-family="sans-serif" font-size="11" font-weight="bold" fill="#0f172a" text-anchor="middle">非接地側 (黒)</text>
+          <text x="160" y="78" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">3本接続</text>
+          <rect x="215" y="45" width="85" height="40" rx="4" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="257" y="62" font-family="sans-serif" font-size="11" font-weight="bold" fill="#b91c1c" text-anchor="middle">点滅線 (イ)</text>
+          <text x="257" y="78" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">2本接続</text>
+          <rect x="215" y="100" width="85" height="40" rx="4" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5"/>
+          <text x="257" y="117" font-family="sans-serif" font-size="11" font-weight="bold" fill="#b91c1c" text-anchor="middle">点滅線 (ロ)</text>
+          <text x="257" y="133" font-family="sans-serif" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">2本接続</text>
+        </svg>`,
+        options: [
+          { text: "イ. 2本用：2個、3本用：1個、4本用：1個", isCorrect: true },
+          { text: "ロ. 2本用：3個、3本用：0個、4本用：1個", isCorrect: false },
+          { text: "ハ. 2本用：1個、3本用：2個、4本用：1個", isCorrect: false },
+          { text: "ニ. 2本用：2個、3本用：2個、4本用：0個", isCorrect: false }
+        ],
+        answerIndex: 0,
+        explanation: `【正解】イ\n4本接続用が1個、3本接続用が1個、2本接続用（イ・ロ）が2個必要です。`,
+        cheatSheet: `【コネクタ】極数に応じた個数をカウントする。`
+      },
+      {
+        id: "q9", category: "配線設計・計算", title: "金属管収容時の電線の許容電流計算",
+        question: "管内に直径1.6mmのIV線3本を収めて施設する場合、電線1本当たりの許容電流[A]はいくらか。ただし減少係数は0.70とする。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <circle cx="100" cy="100" r="50" fill="#f1f5f9" stroke="#475569" stroke-width="5"/>
+          <circle cx="85" cy="85" r="14" fill="#0f172a"/>
+          <circle cx="115" cy="85" r="14" fill="#ffffff" stroke="#475569"/>
+          <circle cx="100" cy="115" r="14" fill="#dc2626"/>
+          <g transform="translate(170, 50)">
+            <text x="10" y="22" font-family="sans-serif" font-size="11" fill="#475569">・電線: 単線 1.6mm</text>
+            <text x="10" y="42" font-family="sans-serif" font-size="11" fill="#475569">・素線許容電流: 27A</text>
+            <text x="10" y="62" font-family="sans-serif" font-size="11" fill="#475569">・収容本数: 3本</text>
+            <text x="10" y="80" font-family="sans-serif" font-size="11" fill="#0284c7" font-weight="bold">・減少係数: 0.70</text>
+          </g>
+        </svg>`,
+        options: [
+          { text: "イ. 15 A", isCorrect: false },
+          { text: "ロ. 19 A", isCorrect: true },
+          { text: "ハ. 24 A", isCorrect: false },
+          { text: "ニ. 27 A", isCorrect: false }
+        ],
+        answerIndex: 1,
+        explanation: `【正解】ロ\n許容電流 ＝ 27 × 0.70 ＝ 18.9 [A]。\n端数処理は【7捨8入】のため、0.9を切り上げて【19 A】となります。`,
+        cheatSheet: `【許容電流】1.6mm: 27A、2.0mm: 35A。端数は必ず7捨8入！`
+      },
+      {
+        id: "q10", category: "配線設計・計算", title: "30A分岐回路の電線太さとコンセント定格",
+        question: "定格電流30Aの配線用遮断器で保護される分岐回路において、施設できる電線の最小太さおよびコンセント定格の組み合わせはどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <rect x="30" y="70" width="55" height="50" rx="4" fill="#0f172a"/>
+          <text x="57" y="100" font-family="sans-serif" font-size="13" font-weight="bold" fill="#38bdf8" text-anchor="middle">30A</text>
+          <line x1="85" y1="95" x2="210" y2="95" stroke="#1e293b" stroke-width="3"/>
+          <circle cx="230" cy="95" r="18" fill="#ffffff" stroke="#1e293b" stroke-width="2.5"/>
+        </svg>`,
+        options: [
+          { text: "イ. 電線太さ：1.6 mm 以上 ／ コンセント定格：15 A 以下", isCorrect: false },
+          { text: "ロ. 電線太さ：2.0 mm 以上 ／ コンセント定格：20 A", isCorrect: false },
+          { text: "ハ. 電線太さ：2.6 mm 以上 ／ コンセント定格：20 A 以上 30 A 以下", isCorrect: true },
+          { text: "ニ. 電線太さ：8.0 mm² 以上 ／ コンセント定格：30 A 以上 40 A 以下", isCorrect: false }
+        ],
+        answerIndex: 2,
+        explanation: `【正解】ハ\n30Aブレーカー分岐回路：電線 2.6mm（5.5mm²）以上、コンセント定格 20A〜30Aです。`,
+        cheatSheet: `【分岐回路】20A ➔ 1.6mm / 20A以下、30A ➔ 2.6mm / 20〜30A`
+      },
+      {
+        id: "q11", category: "測定・検査", title: "低圧配線の絶縁抵抗の判定基準値",
+        question: "単相3線式100/200Vの低圧配線で、対地電圧100Vおよび200V線間の最小絶縁抵抗値[MΩ]はどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <line x1="30" y1="50" x2="160" y2="50" stroke="#0f172a" stroke-width="2"/>
+          <line x1="30" y1="85" x2="160" y2="85" stroke="#3b82f6" stroke-width="2"/>
+          <line x1="30" y1="120" x2="160" y2="120" stroke="#dc2626" stroke-width="2"/>
+          <text x="40" y="150" font-family="sans-serif" font-size="11" fill="#1e40af">対地間(100V): [？] MΩ以上 | 線間(200V): [？] MΩ以上</text>
+        </svg>`,
+        options: [
+          { text: "イ. 対地間：0.1 MΩ以上 ／ 電線相互間：0.1 MΩ以上", isCorrect: false },
+          { text: "ロ. 対地間：0.1 MΩ以上 ／ 電線相互間：0.2 MΩ以上", isCorrect: true },
+          { text: "ハ. 対地間：0.2 MΩ以上 ／ 電線相互間：0.2 MΩ以上", isCorrect: false },
+          { text: "ニ. 対地間：0.2 MΩ以上 ／ 電線相互間：0.4 MΩ以上", isCorrect: false }
+        ],
+        answerIndex: 1,
+        explanation: `【正解】ロ\n対地電圧150V以下は【0.1 MΩ以上】、150V超300V以下は【0.2 MΩ以上】です。`,
+        cheatSheet: `【絶縁抵抗】150V以下: 0.1MΩ、150〜300V: 0.2MΩ、300V超: 0.4MΩ`
+      },
+      {
+        id: "q12", category: "測定・検査", title: "D種接地工事の接地抵抗値と漏電遮断器による緩和",
+        question: "三相200Vの電動機に施すD種接地工事で、0.1秒動作の漏電遮断器がある場合の接地抵抗値の最大許容値はどれか。",
+        diagramSvg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="100%" height="100%">
+          <rect width="320" height="180" fill="#f8fafc" rx="8" stroke="#cbd5e1" stroke-width="1.5"/>
+          <rect x="80" y="50" width="60" height="40" rx="3" fill="#0f172a"/>
+          <text x="110" y="75" font-family="sans-serif" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">漏電遮断器 0.1秒</text>
+          <circle cx="230" cy="70" r="22" fill="#e2e8f0" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="230" y="76" font-family="sans-serif" font-size="16" font-weight="bold" fill="#0f172a" text-anchor="middle">M</text>
+          <line x1="230" y1="92" x2="230" y2="135" stroke="#16a34a" stroke-width="3"/>
+        </svg>`,
+        options: [
+          { text: "イ. 10 Ω以下", isCorrect: false },
+          { text: "ロ. 100 Ω以下", isCorrect: false },
+          { text: "ハ. 500 Ω以下", isCorrect: true },
+          { text: "ニ. 600 Ω以下", isCorrect: false }
+        ],
+        answerIndex: 2,
+        explanation: `【正解】ハ\nD種接地の原則は【100 Ω以下】ですが、0.5秒以内に遮断する漏電遮断器を設けた場合は【500 Ω以下】に緩和されます。`,
+        cheatSheet: `【D種接地】原則: 100Ω以下。0.5秒以内漏電遮断器あり: 500Ω以下`
+      }
+    ];
+
+    const allQuestions = (typeof window.WIRING_QUESTIONS !== 'undefined' && window.WIRING_QUESTIONS.length > 0)
+      ? window.WIRING_QUESTIONS
+      : EMBEDDED_QUESTIONS;
+
+    // ----------------------------------------------------
+    // 2. 回路を描く（複線図作成）問題データセット (全6題)
+    // ----------------------------------------------------
+    const CIRCUIT_PROBLEMS = [
+      {
+        id: "c1",
+        title: "回路1: 基本片切スイッチ回路（照明＋コンセント）",
+        singleLineSvg: `<svg viewBox="0 0 450 110" class="w-full h-auto max-w-[420px]">
+          <line x1="30" y1="55" x2="160" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="25" y="45" font-size="11" font-weight="bold" fill="#475569">電源 100V</text>
+          <circle cx="160" cy="55" r="16" fill="#f1f5f9" stroke="#1e293b" stroke-width="2"/>
+          <text x="160" y="59" font-size="10" font-weight="bold" fill="#1e293b" text-anchor="middle">JB</text>
+          <line x1="160" y1="39" x2="160" y2="20" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="160" cy="15" r="10" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="180" y="19" font-size="11" font-weight="bold" fill="#0f172a">イ (照明)</text>
+          <line x1="176" y1="55" x2="300" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="300" cy="55" r="7" fill="#0f172a"/>
+          <text x="315" y="59" font-size="12" font-weight="bold" fill="#0f172a">イ (スイッチ)</text>
+          <line x1="160" y1="71" x2="160" y2="95" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="160" cy="100" r="10" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="180" y="104" font-size="11" font-weight="bold" fill="#0f172a">コンセント</text>
+        </svg>`,
+        terminals: [
+          { id: "p_N", name: "電源(白・接地N)", x: 80, y: 170, color: "#3b82f6" },
+          { id: "p_L", name: "電源(黒・非接地L)", x: 80, y: 210, color: "#1e293b" },
+          { id: "jb_w", name: "JB(白線中継)", x: 250, y: 150, color: "#3b82f6" },
+          { id: "jb_b", name: "JB(黒線中継)", x: 250, y: 220, color: "#1e293b" },
+          { id: "jb_r", name: "JB(点滅中継)", x: 250, y: 280, color: "#ef4444" },
+          { id: "l_w", name: "照明(白・接地)", x: 420, y: 70, color: "#3b82f6" },
+          { id: "l_k", name: "照明(点滅返り)", x: 490, y: 70, color: "#ef4444" },
+          { id: "s_in", name: "スイッチ(電源黒)", x: 420, y: 200, color: "#1e293b" },
+          { id: "s_out", name: "スイッチ(返り線)", x: 490, y: 200, color: "#ef4444" },
+          { id: "o_w", name: "コンセント(白)", x: 420, y: 310, color: "#3b82f6" },
+          { id: "o_b", name: "コンセント(黒)", x: 490, y: 310, color: "#1e293b" }
+        ],
+        components: [
+          { label: "電源 100V", x: 60, y: 190 },
+          { label: "ジョイントボックス", x: 230, y: 80 },
+          { label: "ランプレセプタクル (イ)", x: 450, y: 40 },
+          { label: "片切スイッチ (イ)", x: 450, y: 170 },
+          { label: "コンセント", x: 450, y: 280 }
+        ],
+        requiredGroups: [
+          ["p_N", "jb_w", "l_w", "o_w"],
+          ["p_L", "jb_b", "s_in", "o_b"],
+          ["s_out", "jb_r", "l_k"]
+        ],
+        guideLines: [
+          { from: "p_N", to: "jb_w", color: "#3b82f6" },
+          { from: "jb_w", to: "l_w", color: "#3b82f6" },
+          { from: "jb_w", to: "o_w", color: "#3b82f6" },
+          { from: "p_L", to: "jb_b", color: "#1e293b" },
+          { from: "jb_b", to: "s_in", color: "#1e293b" },
+          { from: "jb_b", to: "o_b", color: "#1e293b" },
+          { from: "s_out", to: "jb_r", color: "#ef4444" },
+          { from: "jb_r", to: "l_k", color: "#ef4444" }
+        ],
+        steps: [
+          "① 接地側電線（白線）を負荷（ランプレセプタクル）とコンセントの接地側に接続する。",
+          "② 非接地側電線（黒線）をスイッチとコンセントの非接地側に接続する（常時100V供給）。",
+          "③ 片切スイッチからランプレセプタクルへ、点滅返り線（赤線）を接続する。",
+          "④ ジョイントボックス内の接続本数：白3本、黒3本、点滅2本。"
+        ],
+        sleeveCheat: `【リングスリーブ刻印判定】\n・白線3本 (1.6mm×3) ➔ スリーブ「小」で刻印【 小 】\n・黒線3本 (1.6mm×3) ➔ スリーブ「小」で刻印【 小 】\n・点滅線2本 (1.6mm×2) ➔ スリーブ「小」で刻印【 ○ (極小) 】★超重要！`
+      },
+      {
+        id: "c2",
+        title: "回路2: 3路スイッチ回路（2箇所から1つの照明を点滅）",
+        singleLineSvg: `<svg viewBox="0 0 450 110" class="w-full h-auto max-w-[420px]">
+          <line x1="30" y1="55" x2="160" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="25" y="45" font-size="11" font-weight="bold" fill="#475569">電源 100V</text>
+          <circle cx="160" cy="55" r="16" fill="#f1f5f9" stroke="#1e293b" stroke-width="2"/>
+          <text x="160" y="59" font-size="10" font-weight="bold" fill="#1e293b" text-anchor="middle">JB</text>
+          <line x1="160" y1="39" x2="160" y2="18" stroke="#1e293b" stroke-width="2.5"/>
+          <rect x="150" y="5" width="20" height="20" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="180" y="19" font-size="11" font-weight="bold" fill="#0f172a">引掛シーリング (イ)</text>
+          <line x1="148" y1="67" x2="90" y2="95" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="85" cy="95" r="7" fill="#0f172a"/>
+          <text x="60" y="105" font-size="12" font-weight="bold" fill="#0f172a">3 (S1)</text>
+          <line x1="172" y1="67" x2="230" y2="95" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="235" cy="95" r="7" fill="#0f172a"/>
+          <text x="250" y="105" font-size="12" font-weight="bold" fill="#0f172a">3 (S2)</text>
+        </svg>`,
+        terminals: [
+          { id: "p_N", name: "電源(白・N)", x: 80, y: 160, color: "#3b82f6" },
+          { id: "p_L", name: "電源(黒・L)", x: 80, y: 220, color: "#1e293b" },
+          { id: "jb_w", name: "JB(白線中継)", x: 260, y: 130, color: "#3b82f6" },
+          { id: "jb_w1", name: "JB(渡り1)", x: 260, y: 190, color: "#1e293b" },
+          { id: "jb_w2", name: "JB(渡り2)", x: 260, y: 250, color: "#ef4444" },
+          { id: "s1_0", name: "S1(0番・黒固定)", x: 120, y: 310, color: "#1e293b" },
+          { id: "s1_1", name: "S1(1番渡り)", x: 160, y: 310, color: "#1e293b" },
+          { id: "s1_3", name: "S1(3番渡り)", x: 200, y: 310, color: "#ef4444" },
+          { id: "s2_0", name: "S2(0番・照明へ)", x: 340, y: 310, color: "#ef4444" },
+          { id: "s2_1", name: "S2(1番渡り)", x: 380, y: 310, color: "#1e293b" },
+          { id: "s2_3", name: "S2(3番渡り)", x: 420, y: 310, color: "#ef4444" },
+          { id: "cl_w", name: "照明(白・接地)", x: 430, y: 80, color: "#3b82f6" },
+          { id: "cl_r", name: "照明(点滅返り)", x: 490, y: 80, color: "#ef4444" }
+        ],
+        components: [
+          { label: "電源 100V", x: 60, y: 190 },
+          { label: "ジョイントボックス", x: 240, y: 80 },
+          { label: "引掛シーリング (イ)", x: 450, y: 50 },
+          { label: "3路スイッチ 1 (電源側)", x: 140, y: 270 },
+          { label: "3路スイッチ 2 (負荷側)", x: 360, y: 270 }
+        ],
+        requiredGroups: [
+          ["p_N", "jb_w", "cl_w"],
+          ["p_L", "s1_0"],
+          ["s1_1", "jb_w1", "s2_1"],
+          ["s1_3", "jb_w2", "s2_3"],
+          ["s2_0", "cl_r"]
+        ],
+        guideLines: [
+          { from: "p_N", to: "jb_w", color: "#3b82f6" },
+          { from: "jb_w", to: "cl_w", color: "#3b82f6" },
+          { from: "p_L", to: "s1_0", color: "#1e293b" },
+          { from: "s1_1", to: "jb_w1", color: "#1e293b" },
+          { from: "jb_w1", to: "s2_1", color: "#1e293b" },
+          { from: "s1_3", to: "jb_w2", color: "#ef4444" },
+          { from: "jb_w2", to: "s2_3", color: "#ef4444" },
+          { from: "s2_0", to: "cl_r", color: "#ef4444" }
+        ],
+        steps: [
+          "① 接地側電線（白線）を照明器具（引掛シーリング）の接地側へ接続する。",
+          "② 電源の非接地側（黒線）を、電源側3路スイッチS1の【0番端子】へ接続する。",
+          "③ S1の1番・3番端子と、S2の1番・3番端子を【2本の渡り線】で直接接続する。",
+          "④ 負荷側3路スイッチS2の【0番端子】から照明器具へ点滅線を接続する。"
+        ],
+        sleeveCheat: `【3路スイッチの鉄則】\n・S1の「0番」には必ず【電源黒】が入る。\n・S2の「0番」からは必ず【照明】へ向かう。\n・「1番」と「3番」は相互をつなぐ渡り線（必ず2本）。`
+      },
+      {
+        id: "c3",
+        title: "回路3: 異負荷2回路（照明「イ」＋換気扇「ロ」）",
+        singleLineSvg: `<svg viewBox="0 0 450 110" class="w-full h-auto max-w-[420px]">
+          <line x1="30" y1="55" x2="160" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="25" y="45" font-size="11" font-weight="bold" fill="#475569">電源 100V</text>
+          <circle cx="160" cy="55" r="16" fill="#f1f5f9" stroke="#1e293b" stroke-width="2"/>
+          <text x="160" y="59" font-size="10" font-weight="bold" fill="#1e293b" text-anchor="middle">JB</text>
+          <line x1="160" y1="39" x2="160" y2="18" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="160" cy="12" r="10" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="180" y="16" font-size="11" font-weight="bold" fill="#0f172a">イ (照明)</text>
+          <line x1="176" y1="55" x2="280" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="290" cy="55" r="12" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="286" y="59" font-size="11" font-weight="bold" fill="#0f172a">F</text>
+          <text x="310" y="59" font-size="11" font-weight="bold" fill="#0f172a">ロ (換気扇)</text>
+          <line x1="160" y1="71" x2="160" y2="95" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="152" cy="100" r="5" fill="#0f172a"/>
+          <circle cx="168" cy="100" r="5" fill="#0f172a"/>
+          <text x="180" y="104" font-size="11" font-weight="bold" fill="#0f172a">スイッチ (イ・ロ)</text>
+        </svg>`,
+        terminals: [
+          { id: "p_N", name: "電源(白・N)", x: 80, y: 160, color: "#3b82f6" },
+          { id: "p_L", name: "電源(黒・L)", x: 80, y: 220, color: "#1e293b" },
+          { id: "jb_w", name: "JB(共通白)", x: 250, y: 130, color: "#3b82f6" },
+          { id: "jb_b", name: "JB(共通黒)", x: 250, y: 190, color: "#1e293b" },
+          { id: "jb_i", name: "JB(イ返り)", x: 250, y: 245, color: "#ef4444" },
+          { id: "jb_ro", name: "JB(ロ返り)", x: 250, y: 300, color: "#10b981" },
+          { id: "li_w", name: "照明イ(白)", x: 420, y: 65, color: "#3b82f6" },
+          { id: "li_r", name: "照明イ(点滅)", x: 490, y: 65, color: "#ef4444" },
+          { id: "f_w", name: "換気扇ロ(白)", x: 420, y: 155, color: "#3b82f6" },
+          { id: "f_g", name: "換気扇ロ(点滅)", x: 490, y: 155, color: "#10b981" },
+          { id: "sw_in", name: "スイッチ連用(電源黒)", x: 420, y: 270, color: "#1e293b" },
+          { id: "sw_i", name: "スイッチイ(返り)", x: 490, y: 250, color: "#ef4444" },
+          { id: "sw_ro", name: "スイッチロ(返り)", x: 490, y: 295, color: "#10b981" }
+        ],
+        components: [
+          { label: "電源 100V", x: 60, y: 190 },
+          { label: "ジョイントボックス", x: 230, y: 80 },
+          { label: "照明器具 (イ)", x: 450, y: 35 },
+          { label: "換気扇 (ロ)", x: 450, y: 125 },
+          { label: "2連スイッチ (イ・ロ)", x: 450, y: 220 }
+        ],
+        requiredGroups: [
+          ["p_N", "jb_w", "li_w", "f_w"],
+          ["p_L", "jb_b", "sw_in"],
+          ["sw_i", "jb_i", "li_r"],
+          ["sw_ro", "jb_ro", "f_g"]
+        ],
+        guideLines: [
+          { from: "p_N", to: "jb_w", color: "#3b82f6" },
+          { from: "jb_w", to: "li_w", color: "#3b82f6" },
+          { from: "jb_w", to: "f_w", color: "#3b82f6" },
+          { from: "p_L", to: "jb_b", color: "#1e293b" },
+          { from: "jb_b", to: "sw_in", color: "#1e293b" },
+          { from: "sw_i", to: "jb_i", color: "#ef4444" },
+          { from: "jb_i", to: "li_r", color: "#ef4444" },
+          { from: "sw_ro", to: "jb_ro", color: "#10b981" },
+          { from: "jb_ro", to: "f_g", color: "#10b981" }
+        ],
+        steps: [
+          "① 接地側（白線）を照明「イ」と換気扇「ロ」の両方の接地側端子へつなぐ。",
+          "② 非接地側（黒線）をスイッチ連用枠の電源端子へ入れる（スイッチ間で渡り線を設ける）。",
+          "③ スイッチ「イ」の出力端子から照明「イ」へつなぐ。",
+          "④ スイッチ「ロ」の出力端子から換気扇「ロ」へつなぐ。"
+        ],
+        sleeveCheat: `【2連スイッチの渡り線】\nスイッチの電源黒線は共通化（渡り線）できるため、JB〜スイッチ間の電線は【黒(電源)＋赤(イ返り)＋白(ロ返り)】の計3心で配線します。`
+      },
+      {
+        id: "c4",
+        title: "回路4: 確認表示灯（パイロットランプ同時点滅回路）",
+        singleLineSvg: `<svg viewBox="0 0 450 110" class="w-full h-auto max-w-[420px]">
+          <line x1="30" y1="55" x2="160" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="25" y="45" font-size="11" font-weight="bold" fill="#475569">電源 100V</text>
+          <circle cx="160" cy="55" r="16" fill="#f1f5f9" stroke="#1e293b" stroke-width="2"/>
+          <line x1="176" y1="55" x2="280" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="290" cy="55" r="12" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="286" y="59" font-size="11" font-weight="bold" fill="#0f172a">F</text>
+          <text x="310" y="59" font-size="11" font-weight="bold" fill="#0f172a">換気扇 (イ)</text>
+          <line x1="160" y1="71" x2="160" y2="95" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="160" cy="100" r="7" fill="#0f172a"/>
+          <text x="175" y="104" font-size="11" font-weight="bold" fill="#ef4444">●L (パイロットランプ同時点滅)</text>
+        </svg>`,
+        terminals: [
+          { id: "p_N", name: "電源(白・N)", x: 80, y: 160, color: "#3b82f6" },
+          { id: "p_L", name: "電源(黒・L)", x: 80, y: 220, color: "#1e293b" },
+          { id: "jb_w", name: "JB(共通白)", x: 260, y: 140, color: "#3b82f6" },
+          { id: "jb_b", name: "JB(電源黒)", x: 260, y: 200, color: "#1e293b" },
+          { id: "jb_r", name: "JB(点滅返り)", x: 260, y: 260, color: "#ef4444" },
+          { id: "f_w", name: "換気扇(白)", x: 430, y: 80, color: "#3b82f6" },
+          { id: "f_r", name: "換気扇(返り)", x: 490, y: 80, color: "#ef4444" },
+          { id: "pl_w", name: "ランプ(白・同時点滅用)", x: 390, y: 280, color: "#3b82f6" },
+          { id: "pl_s", name: "スイッチ電源(黒)", x: 440, y: 280, color: "#1e293b" },
+          { id: "pl_out", name: "スイッチ点滅出力", x: 490, y: 280, color: "#ef4444" }
+        ],
+        components: [
+          { label: "電源 100V", x: 60, y: 190 },
+          { label: "ジョイントボックス", x: 240, y: 80 },
+          { label: "換気扇 (負荷)", x: 450, y: 40 },
+          { label: "パイロットランプ内蔵スイッチ", x: 440, y: 240 }
+        ],
+        requiredGroups: [
+          ["p_N", "jb_w", "f_w", "pl_w"],
+          ["p_L", "jb_b", "pl_s"],
+          ["pl_out", "jb_r", "f_r"]
+        ],
+        guideLines: [
+          { from: "p_N", to: "jb_w", color: "#3b82f6" },
+          { from: "jb_w", to: "f_w", color: "#3b82f6" },
+          { from: "jb_w", to: "pl_w", color: "#3b82f6" },
+          { from: "p_L", to: "jb_b", color: "#1e293b" },
+          { from: "jb_b", to: "pl_s", color: "#1e293b" },
+          { from: "pl_out", to: "jb_r", color: "#ef4444" },
+          { from: "jb_r", to: "f_r", color: "#ef4444" }
+        ],
+        steps: [
+          "① パイロットランプ同時点滅回路では、スイッチがONになったときに換気扇とランプが同時に点灯（並列接続）します。",
+          "② したがって、スイッチボックス側にも【接地側白線】を引き込む必要があります（スイッチ・ランプ・白線の3本配線）。",
+          "③ スイッチONで閉じた電流が、換気扇とパイロットランプの両方に流れて白線へ戻るように結線します。"
+        ],
+        sleeveCheat: `【同時点滅の要点】\n負荷とパイロットランプが並列接続になるため、スイッチ位置に【白線】が必要！常時点滅（異点滅）との結線の違いに注意。`
+      },
+      {
+        id: "c5",
+        title: "回路5: 位置表示灯（ホタルスイッチ）＋常時コンセント回路",
+        singleLineSvg: `<svg viewBox="0 0 450 110" class="w-full h-auto max-w-[420px]">
+          <line x1="30" y1="55" x2="160" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <text x="25" y="45" font-size="11" font-weight="bold" fill="#475569">電源 100V</text>
+          <circle cx="160" cy="55" r="16" fill="#f1f5f9" stroke="#1e293b" stroke-width="2"/>
+          <line x1="160" y1="39" x2="160" y2="18" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="160" cy="12" r="10" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="180" y="16" font-size="11" font-weight="bold" fill="#0f172a">イ (照明)</text>
+          <line x1="160" y1="71" x2="160" y2="95" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="150" cy="100" r="6" fill="#0f172a"/>
+          <text x="146" y="104" font-size="9" fill="#0284c7">H</text>
+          <circle cx="170" cy="100" r="8" fill="#fff" stroke="#1e293b" stroke-width="1.5"/>
+          <text x="185" y="104" font-size="11" font-weight="bold" fill="#0f172a">ホタルスイッチ ＋ コンセント</text>
+        </svg>`,
+        terminals: [
+          { id: "p_N", name: "電源(白・N)", x: 80, y: 160, color: "#3b82f6" },
+          { id: "p_L", name: "電源(黒・L)", x: 80, y: 220, color: "#1e293b" },
+          { id: "jb_w", name: "JB(白中継)", x: 260, y: 140, color: "#3b82f6" },
+          { id: "jb_b", name: "JB(黒中継)", x: 260, y: 200, color: "#1e293b" },
+          { id: "jb_r", name: "JB(点滅返り)", x: 260, y: 260, color: "#ef4444" },
+          { id: "l_w", name: "照明(白)", x: 430, y: 80, color: "#3b82f6" },
+          { id: "l_r", name: "照明(返り)", x: 490, y: 80, color: "#ef4444" },
+          { id: "h_in", name: "ホタル(電源黒)", x: 420, y: 220, color: "#1e293b" },
+          { id: "h_out", name: "ホタル(返り)", x: 490, y: 220, color: "#ef4444" },
+          { id: "o_w", name: "コンセント(白)", x: 420, y: 310, color: "#3b82f6" },
+          { id: "o_b", name: "コンセント(黒)", x: 490, y: 310, color: "#1e293b" }
+        ],
+        components: [
+          { label: "電源 100V", x: 60, y: 190 },
+          { label: "ジョイントボックス", x: 240, y: 80 },
+          { label: "照明器具 (イ)", x: 450, y: 40 },
+          { label: "ホタルスイッチ (●H)", x: 450, y: 180 },
+          { label: "コンセント", x: 450, y: 280 }
+        ],
+        requiredGroups: [
+          ["p_N", "jb_w", "l_w", "o_w"],
+          ["p_L", "jb_b", "h_in", "o_b"],
+          ["h_out", "jb_r", "l_r"]
+        ],
+        guideLines: [
+          { from: "p_N", to: "jb_w", color: "#3b82f6" },
+          { from: "jb_w", to: "l_w", color: "#3b82f6" },
+          { from: "jb_w", to: "o_w", color: "#3b82f6" },
+          { from: "p_L", to: "jb_b", color: "#1e293b" },
+          { from: "jb_b", to: "h_in", color: "#1e293b" },
+          { from: "jb_b", to: "o_b", color: "#1e293b" },
+          { from: "h_out", to: "jb_r", color: "#ef4444" },
+          { from: "jb_r", to: "l_r", color: "#ef4444" }
+        ],
+        steps: [
+          "① ホタルスイッチ内部にはネオンランプが内蔵されており、片切スイッチと同様に2端子のみで配線できます。",
+          "② 下段のコンセントには常時100V（黒と白）が必要です。",
+          "③ スイッチ位置への電源黒線は渡り線でコンセントと共用できます。"
+        ],
+        sleeveCheat: `【ホタルとパイロットの違い】\nホタルスイッチは通常の片切スイッチと同じ2端子接続（白線引き込み不要）。`
+      },
+      {
+        id: "c6",
+        title: "回路6: 3箇所点滅回路（3路スイッチ2個 ＋ 4路スイッチ1個）",
+        singleLineSvg: `<svg viewBox="0 0 450 110" class="w-full h-auto max-w-[420px]">
+          <line x1="20" y1="55" x2="80" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="80" cy="55" r="6" fill="#0f172a"/><text x="75" y="40" font-size="10" font-weight="bold">3 (S1)</text>
+          <line x1="86" y1="55" x2="180" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="180" cy="55" r="6" fill="#0f172a"/><text x="175" y="40" font-size="10" font-weight="bold">4 (S4)</text>
+          <line x1="186" y1="55" x2="280" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="280" cy="55" r="6" fill="#0f172a"/><text x="275" y="40" font-size="10" font-weight="bold">3 (S2)</text>
+          <line x1="286" y1="55" x2="380" y2="55" stroke="#1e293b" stroke-width="2.5"/>
+          <circle cx="390" cy="55" r="10" fill="#fff" stroke="#1e293b" stroke-width="2"/>
+          <text x="380" y="80" font-size="10" font-weight="bold">照明</text>
+        </svg>`,
+        terminals: [
+          { id: "p_N", name: "電源(白・N)", x: 60, y: 160, color: "#3b82f6" },
+          { id: "p_L", name: "電源(黒・L)", x: 60, y: 220, color: "#1e293b" },
+          { id: "s1_0", name: "3路S1(0番)", x: 140, y: 250, color: "#1e293b" },
+          { id: "s1_1", name: "3路S1(1番)", x: 180, y: 220, color: "#1e293b" },
+          { id: "s1_3", name: "3路S1(3番)", x: 180, y: 280, color: "#ef4444" },
+          { id: "s4_1", name: "4路S4(入力1)", x: 280, y: 220, color: "#1e293b" },
+          { id: "s4_2", name: "4路S4(入力2)", x: 280, y: 280, color: "#ef4444" },
+          { id: "s4_3", name: "4路S4(出力3)", x: 330, y: 220, color: "#1e293b" },
+          { id: "s4_4", name: "4路S4(出力4)", x: 330, y: 280, color: "#ef4444" },
+          { id: "s2_1", name: "3路S2(1番)", x: 430, y: 220, color: "#1e293b" },
+          { id: "s2_3", name: "3路S2(3番)", x: 430, y: 280, color: "#ef4444" },
+          { id: "s2_0", name: "3路S2(0番)", x: 470, y: 250, color: "#ef4444" },
+          { id: "l_w", name: "照明(白・接地)", x: 450, y: 80, color: "#3b82f6" },
+          { id: "l_r", name: "照明(点滅返り)", x: 510, y: 80, color: "#ef4444" }
+        ],
+        components: [
+          { label: "電源 100V", x: 50, y: 190 },
+          { label: "3路スイッチ 1", x: 150, y: 180 },
+          { label: "4路スイッチ", x: 300, y: 180 },
+          { label: "3路スイッチ 2", x: 440, y: 180 },
+          { label: "照明器具", x: 480, y: 40 }
+        ],
+        requiredGroups: [
+          ["p_N", "l_w"],
+          ["p_L", "s1_0"],
+          ["s1_1", "s4_1"],
+          ["s1_3", "s4_2"],
+          ["s4_3", "s2_1"],
+          ["s4_4", "s2_3"],
+          ["s2_0", "l_r"]
+        ],
+        guideLines: [
+          { from: "p_N", to: "l_w", color: "#3b82f6" },
+          { from: "p_L", to: "s1_0", color: "#1e293b" },
+          { from: "s1_1", to: "s4_1", color: "#1e293b" },
+          { from: "s1_3", to: "s4_2", color: "#ef4444" },
+          { from: "s4_3", to: "s2_1", color: "#1e293b" },
+          { from: "s4_4", to: "s2_3", color: "#ef4444" },
+          { from: "s2_0", to: "l_r", color: "#ef4444" }
+        ],
+        steps: [
+          "① 3箇所以上から点滅させる回路は、両端に【3路スイッチ】、中間に【4路スイッチ】を配置します。",
+          "② 接地側白線は直接照明へ接続します。",
+          "③ 電源黒線をS1の0番へ入れ、S1の渡り線を4路スイッチの入力端子へ接続します。",
+          "④ 4路スイッチの出力端子をS2の渡り線端子へ接続し、S2の0番から照明へつなぎます。"
+        ],
+        sleeveCheat: `【4路スイッチの配置】\n[電源] ➔ [3路] ➔ [4路] ➔ [3路] ➔ [照明]`
+      }
+    ];
+
+    // ----------------------------------------------------
+    // アプリケーション全体の状態管理
+    // ----------------------------------------------------
+    let appState = {
+      activeTab: 'quiz',
+      quizIndex: 0,
+      quizMode: 'all',
+      quizCategory: 'all',
+      quizAnswered: {},
+      quizMistakes: new Set(),
+      quizStats: { correct: 0, wrong: 0 },
+
+      circuitIndex: 0,
+      circuitMode: 'all',
+      circuitTool: 'wire',
+      circuitWireColor: '#1e293b',
+      circuitPenColor: '#ef4444',
+      circuitMistakes: new Set(),
+      circuitConnections: [],
+      circuitSelectedTerminal: null,
+      circuitAnswered: {},
+
+      openBookMode: false
+    };
+
+    const STORAGE_KEY_QUIZ_MISTAKES = 'denko2_wiring_mistakes';
+    const STORAGE_KEY_QUIZ_STATS = 'denko2_wiring_stats';
+    const STORAGE_KEY_CIRCUIT_MISTAKES = 'denko2_circuit_mistakes';
+
+    function init() {
+      loadStorage();
+      setupCommonListeners();
+      setupQuizListeners();
+      setupCircuitListeners();
+      renderApp();
+    }
+
+    function loadStorage() {
+      try {
+        const qm = localStorage.getItem(STORAGE_KEY_QUIZ_MISTAKES);
+        if (qm) appState.quizMistakes = new Set(JSON.parse(qm));
+        const qs = localStorage.getItem(STORAGE_KEY_QUIZ_STATS);
+        if (qs) appState.quizStats = JSON.parse(qs);
+        const cm = localStorage.getItem(STORAGE_KEY_CIRCUIT_MISTAKES);
+        if (cm) appState.circuitMistakes = new Set(JSON.parse(cm));
+      } catch (e) { console.error("Load storage err:", e); }
+    }
+
+    function saveStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY_QUIZ_MISTAKES, JSON.stringify(Array.from(appState.quizMistakes)));
+        localStorage.setItem(STORAGE_KEY_QUIZ_STATS, JSON.stringify(appState.quizStats));
+        localStorage.setItem(STORAGE_KEY_CIRCUIT_MISTAKES, JSON.stringify(Array.from(appState.circuitMistakes)));
+      } catch (e) { console.error("Save storage err:", e); }
+    }
+
+    function setupCommonListeners() {
+      document.getElementById('tabBtnQuiz').addEventListener('click', () => switchTab('quiz'));
+      document.getElementById('tabBtnCircuit').addEventListener('click', () => switchTab('circuit'));
+
+      document.getElementById('openBookToggle').addEventListener('change', (e) => {
+        appState.openBookMode = e.target.checked;
+        if (appState.activeTab === 'quiz') {
+          renderQuizOptions();
+          renderQuizExplanation();
+        } else {
+          renderCircuitCanvas();
+          renderCircuitExplanation();
+        }
+      });
+
+      document.getElementById('btnResetHistory').addEventListener('click', () => {
+        if (confirm('すべての演習履歴・要復習キューを初期化しますか？')) {
+          appState.quizMistakes.clear();
+          appState.circuitMistakes.clear();
+          appState.quizStats = { correct: 0, wrong: 0 };
+          appState.quizAnswered = {};
+          appState.circuitAnswered = {};
+          saveStorage();
+          renderApp();
+        }
+      });
+
+      document.getElementById('btnZoomDiagram').addEventListener('click', () => {
+        const q = getCurrentQuiz();
+        if (!q) return;
+        document.getElementById('modalDiagramBody').innerHTML = q.diagramSvg;
+        document.getElementById('diagramModal').classList.remove('hidden');
+      });
+      document.getElementById('btnCloseModal').addEventListener('click', () => {
+        document.getElementById('diagramModal').classList.add('hidden');
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        if (appState.activeTab === 'quiz') {
+          if (['1', '2', '3', '4'].includes(e.key)) {
+            handleQuizAnswer(parseInt(e.key) - 1);
+          } else if (e.key === 'n' || e.key === 'N' || e.key === 'ArrowRight') {
+            goNextQuiz();
+          } else if (e.key === 'ArrowLeft') {
+            goPrevQuiz();
+          } else if (e.key === 'r' || e.key === 'R') {
+            retryCurrentQuiz();
+          }
+        }
+      });
+    }
+
+    function switchTab(tab) {
+      appState.activeTab = tab;
+      const btnQuiz = document.getElementById('tabBtnQuiz');
+      const btnCircuit = document.getElementById('tabBtnCircuit');
+      const secQuiz = document.getElementById('quizSection');
+      const secCircuit = document.getElementById('circuitSection');
+      const openBookLabel = document.getElementById('openBookLabel');
+
+      if (tab === 'quiz') {
+        btnQuiz.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-emerald-600 text-white shadow";
+        btnCircuit.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white";
+        secQuiz.classList.remove('hidden');
+        secCircuit.classList.add('hidden');
+        openBookLabel.textContent = "解説・解答を見ながら解く";
+      } else {
+        btnCircuit.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-emerald-600 text-white shadow";
+        btnQuiz.className = "px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white";
+        secCircuit.classList.remove('hidden');
+        secQuiz.classList.add('hidden');
+        openBookLabel.textContent = "模範結線ガイドを見ながら描く";
+      }
+
+      renderApp();
+    }
+
+    // ----------------------------------------------------
+    // 四肢択一ロジック
+    // ----------------------------------------------------
+    function setupQuizListeners() {
+      document.getElementById('btnModeAll').addEventListener('click', () => setQuizMode('all'));
+      document.getElementById('btnModeReview').addEventListener('click', () => {
+        const count = appState.activeTab === 'quiz' ? appState.quizMistakes.size : appState.circuitMistakes.size;
+        if (count === 0) {
+          alert('現在、要復習の問題はありません！間違えた問題がここに自動ストックされます。');
+          return;
+        }
+        setQuizMode('review');
+      });
+
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => setQuizCategory(btn.getAttribute('data-cat')));
+      });
+
+      document.getElementById('btnPrev').addEventListener('click', goPrevQuiz);
+      document.getElementById('btnNext').addEventListener('click', goNextQuiz);
+      document.getElementById('btnNextFromFeedback').addEventListener('click', goNextQuiz);
+      document.getElementById('btnRetryCurrent').addEventListener('click', retryCurrentQuiz);
+    }
+
+    function getActiveQuizList() {
+      let list = allQuestions;
+      if (appState.quizCategory !== 'all') list = list.filter(q => q.category === appState.quizCategory);
+      if (appState.quizMode === 'review') list = list.filter(q => appState.quizMistakes.has(q.id));
+      return list;
+    }
+
+    function getCurrentQuiz() {
+      const list = getActiveQuizList();
+      if (list.length === 0) return null;
+      if (appState.quizIndex >= list.length) appState.quizIndex = 0;
+      return list[appState.quizIndex];
+    }
+
+    function setQuizMode(mode) {
+      appState.quizMode = mode;
+      appState.quizIndex = 0;
+      const btnAll = document.getElementById('btnModeAll');
+      const btnRev = document.getElementById('btnModeReview');
+      if (mode === 'all') {
+        btnAll.className = "px-3 py-1.5 font-medium rounded-l-lg bg-emerald-600 text-white transition";
+        btnRev.className = "px-3 py-1.5 font-medium rounded-r-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5";
+      } else {
+        btnRev.className = "px-3 py-1.5 font-medium rounded-r-lg bg-rose-600 text-white transition flex items-center gap-1.5";
+        btnAll.className = "px-3 py-1.5 font-medium rounded-l-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+      }
+      renderApp();
+    }
+
+    function setQuizCategory(cat) {
+      appState.quizCategory = cat;
+      appState.quizIndex = 0;
+      document.querySelectorAll('.cat-btn').forEach(btn => {
+        if (btn.getAttribute('data-cat') === cat) btn.className = "cat-btn px-2.5 py-1 rounded-md font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300";
+        else btn.className = "cat-btn px-2.5 py-1 rounded-md font-medium bg-slate-100 text-slate-600 hover:bg-slate-200";
+      });
+      renderApp();
+    }
+
+    function goPrevQuiz() {
+      const list = getActiveQuizList();
+      if (list.length <= 1) return;
+      appState.quizIndex = (appState.quizIndex - 1 + list.length) % list.length;
+      renderApp();
+    }
+
+    function goNextQuiz() {
+      const list = getActiveQuizList();
+      if (list.length <= 1) return;
+      appState.quizIndex = (appState.quizIndex + 1) % list.length;
+      renderApp();
+    }
+
+    function retryCurrentQuiz() {
+      const q = getCurrentQuiz();
+      if (!q) return;
+      delete appState.quizAnswered[q.id];
+      renderApp();
+    }
+
+    function handleQuizAnswer(idx) {
+      const q = getCurrentQuiz();
+      if (!q) return;
+      const isCorrect = (idx === q.answerIndex);
+      const isFirst = !appState.quizAnswered[q.id];
+
+      appState.quizAnswered[q.id] = { selectedIndex: idx, isCorrect: isCorrect };
+      if (isFirst) {
+        if (isCorrect) appState.quizStats.correct++;
+        else appState.quizStats.wrong++;
+      }
+      if (!isCorrect) appState.quizMistakes.add(q.id);
+      else if (appState.quizMode === 'review') appState.quizMistakes.delete(q.id);
+      saveStorage();
+      renderApp();
+    }
+
+    function renderQuizSection() {
+      const q = getCurrentQuiz();
+      const list = getActiveQuizList();
+
+      if (!q) {
+        if (appState.quizMode === 'review' && appState.quizMistakes.size === 0) {
+          alert('🎉 四肢択一の復習問題をすべてクリアしました！完璧です！');
+          setQuizMode('all');
+        }
+        return;
+      }
+
+      document.getElementById('progressText').textContent = `第 ${appState.quizIndex + 1} 問 / 全 ${list.length} 問`;
+      document.getElementById('progressBar').style.width = `${Math.round(((appState.quizIndex + 1) / list.length) * 100)}%`;
+      document.getElementById('categoryBadge').textContent = q.category || '配線図';
+      document.getElementById('questionIdBadge').textContent = q.id.toUpperCase();
+      
+      const wrongBadge = document.getElementById('wrongMarkBadge');
+      if (appState.quizMistakes.has(q.id)) wrongBadge.classList.remove('hidden');
+      else wrongBadge.classList.add('hidden');
+
+      document.getElementById('questionTitle').textContent = q.title;
+      document.getElementById('questionText').textContent = q.question;
+      document.getElementById('diagramContainer').innerHTML = q.diagramSvg;
+
+      renderQuizOptions();
+      renderQuizExplanation();
+      updateStatsUI();
+    }
+
+    function renderQuizOptions() {
+      const q = getCurrentQuiz();
+      if (!q) return;
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = '';
+      const ansInfo = appState.quizAnswered[q.id];
+      const hasAnswered = !!ansInfo;
+
+      q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.className = "p-3 rounded-xl border text-left text-xs md:text-sm font-medium transition flex items-start gap-2.5 relative shadow-sm cursor-pointer ";
+        const isCorrectChoice = (idx === q.answerIndex);
+        const isSelected = hasAnswered && (ansInfo.selectedIndex === idx);
+
+        if (hasAnswered) {
+          if (isCorrectChoice) btn.className += "bg-emerald-50 border-emerald-500 text-emerald-950 font-bold ring-2 ring-emerald-400";
+          else if (isSelected) btn.className += "bg-rose-50 border-rose-500 text-rose-950 line-through ring-1 ring-rose-400";
+          else btn.className += "bg-slate-50 border-slate-200 text-slate-400 opacity-60";
+        } else {
+          if (appState.openBookMode && isCorrectChoice) btn.className += "bg-amber-50/80 border-amber-400 text-slate-900 hover:bg-amber-100 ring-2 ring-amber-300";
+          else btn.className += "bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-800";
+        }
+
+        const mark = document.createElement('span');
+        mark.className = "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ";
+        if (hasAnswered) {
+          if (isCorrectChoice) { mark.className += "bg-emerald-500 text-white"; mark.textContent = "✓"; }
+          else if (isSelected) { mark.className += "bg-rose-500 text-white"; mark.textContent = "✕"; }
+          else { mark.className += "bg-slate-200 text-slate-600"; mark.textContent = idx + 1; }
+        } else {
+          mark.className += (appState.openBookMode && isCorrectChoice) ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-700";
+          mark.textContent = idx + 1;
+        }
+
+        const text = document.createElement('span');
+        text.className = "flex-1 mt-0.5 leading-snug";
+        text.textContent = opt.text;
+
+        btn.appendChild(mark);
+        btn.appendChild(text);
+        btn.addEventListener('click', () => handleQuizAnswer(idx));
+        container.appendChild(btn);
+      });
+
+      const fb = document.getElementById('feedbackBox');
+      if (hasAnswered) {
+        fb.classList.remove('hidden');
+        if (ansInfo.isCorrect) {
+          fb.className = "p-3.5 rounded-xl border bg-emerald-50 border-emerald-300 flex flex-wrap items-center justify-between gap-3 fade-in";
+          document.getElementById('feedbackIcon').textContent = "⭕";
+          document.getElementById('feedbackTitle').textContent = "正解！素晴らしい！";
+          document.getElementById('feedbackTitle').className = "font-bold text-sm text-emerald-900";
+          document.getElementById('feedbackSub').textContent = "解説と要点を確認して次へ進みましょう。";
+        } else {
+          fb.className = "p-3.5 rounded-xl border bg-rose-50 border-rose-300 flex flex-wrap items-center justify-between gap-3 fade-in";
+          document.getElementById('feedbackIcon').textContent = "❌";
+          document.getElementById('feedbackTitle').textContent = "不正解…「要復習」に追加しました！";
+          document.getElementById('feedbackTitle').className = "font-bold text-sm text-rose-900";
+          document.getElementById('feedbackSub').textContent = "「もう一度解く」で即再挑戦するか、右の解説を確認！";
+        }
+      } else {
+        fb.classList.add('hidden');
+      }
+    }
+
+    function renderQuizExplanation() {
+      const q = getCurrentQuiz();
+      if (!q) return;
+      const ansInfo = appState.quizAnswered[q.id];
+      const show = appState.openBookMode || !!ansInfo;
+
+      const locked = document.getElementById('explanationLocked');
+      const content = document.getElementById('explanationContent');
+      const badge = document.getElementById('openBookIndicator');
+
+      if (appState.openBookMode) badge.classList.remove('hidden');
+      else badge.classList.add('hidden');
+
+      if (show) {
+        locked.classList.add('hidden');
+        content.classList.remove('hidden');
+        document.getElementById('correctOptionText').textContent = q.options[q.answerIndex].text;
+        document.getElementById('explanationText').textContent = q.explanation;
+        document.getElementById('cheatSheetText').textContent = q.cheatSheet || '特になし';
+      } else {
+        locked.classList.remove('hidden');
+        content.classList.add('hidden');
+      }
+    }
+
+    // ----------------------------------------------------
+    // 3. 回路を描く演習（複線図作成）ロジック
+    // ----------------------------------------------------
+    let isDrawingMemo = false;
+    let memoLastX = 0, memoLastY = 0;
+
+    function setupCircuitListeners() {
+      document.getElementById('btnToolWire').addEventListener('click', () => setCircuitTool('wire'));
+      document.getElementById('btnToolPen').addEventListener('click', () => setCircuitTool('pen'));
+
+      document.querySelectorAll('.wire-color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          appState.circuitWireColor = btn.getAttribute('data-color');
+          document.querySelectorAll('.wire-color-btn').forEach(b => b.classList.remove('ring-2', 'ring-emerald-500'));
+          btn.classList.add('ring-2', 'ring-emerald-500');
+        });
+      });
+
+      document.getElementById('btnUndoWire').addEventListener('click', undoCircuitWire);
+      document.getElementById('btnClearCanvas').addEventListener('click', clearCircuitCanvas);
+      document.getElementById('btnCheckCircuit').addEventListener('click', checkCircuitSolution);
+      document.getElementById('btnRetryCircuit').addEventListener('click', retryCurrentCircuit);
+      document.getElementById('btnNextCircuitFromFeedback').addEventListener('click', goNextCircuit);
+
+      document.getElementById('btnCircuitPrev').addEventListener('click', goPrevCircuit);
+      document.getElementById('btnCircuitNext').addEventListener('click', goNextCircuit);
+
+      const memo = document.getElementById('memoCanvas');
+      const ctx = memo.getContext('2d');
+
+      memo.addEventListener('mousedown', (e) => {
+        if (appState.circuitTool !== 'pen') return;
+        isDrawingMemo = true;
+        const rect = memo.getBoundingClientRect();
+        memoLastX = e.clientX - rect.left;
+        memoLastY = e.clientY - rect.top;
+      });
+
+      memo.addEventListener('mousemove', (e) => {
+        if (!isDrawingMemo || appState.circuitTool !== 'pen') return;
+        const rect = memo.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        ctx.beginPath();
+        ctx.moveTo(memoLastX, memoLastY);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        memoLastX = x;
+        memoLastY = y;
+      });
+
+      window.addEventListener('mouseup', () => { isDrawingMemo = false; });
+    }
+
+    function setCircuitTool(tool) {
+      appState.circuitTool = tool;
+      const btnWire = document.getElementById('btnToolWire');
+      const btnPen = document.getElementById('btnToolPen');
+      const memo = document.getElementById('memoCanvas');
+      const help = document.getElementById('circuitCanvasHelp');
+
+      if (tool === 'wire') {
+        btnWire.className = "px-2.5 py-1 rounded-md font-bold bg-white text-emerald-700 shadow-sm transition flex items-center gap-1";
+        btnPen.className = "px-2.5 py-1 rounded-md font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1";
+        memo.style.pointerEvents = 'none';
+        help.textContent = "端子（丸印）をクリックし、つなぐ相手の端子をクリックして結線します";
+      } else {
+        btnPen.className = "px-2.5 py-1 rounded-md font-bold bg-white text-emerald-700 shadow-sm transition flex items-center gap-1";
+        btnWire.className = "px-2.5 py-1 rounded-md font-bold text-slate-600 hover:text-slate-900 transition flex items-center gap-1";
+        memo.style.pointerEvents = 'auto';
+        memo.style.cursor = 'crosshair';
+        help.textContent = "キャンバス上に自由に手描きメモ（色指定やスリーブ刻印メモ等）が書けます";
+      }
+    }
+
+    function getCurrentCircuit() {
+      if (appState.circuitIndex >= CIRCUIT_PROBLEMS.length) appState.circuitIndex = 0;
+      return CIRCUIT_PROBLEMS[appState.circuitIndex];
+    }
+
+    function goPrevCircuit() {
+      appState.circuitIndex = (appState.circuitIndex - 1 + CIRCUIT_PROBLEMS.length) % CIRCUIT_PROBLEMS.length;
+      resetCircuitWorkingData();
+      renderApp();
+    }
+
+    function goNextCircuit() {
+      appState.circuitIndex = (appState.circuitIndex + 1) % CIRCUIT_PROBLEMS.length;
+      resetCircuitWorkingData();
+      renderApp();
+    }
+
+    function resetCircuitWorkingData() {
+      appState.circuitConnections = [];
+      appState.circuitSelectedTerminal = null;
+      const memo = document.getElementById('memoCanvas');
+      const ctx = memo.getContext('2d');
+      ctx.clearRect(0, 0, memo.width, memo.height);
+      document.getElementById('circuitFeedbackBox').classList.add('hidden');
+    }
+
+    function undoCircuitWire() {
+      if (appState.circuitConnections.length > 0) {
+        appState.circuitConnections.pop();
+        renderCircuitCanvas();
+      }
+    }
+
+    function clearCircuitCanvas() {
+      if (confirm('現在の結線と手描きメモをすべて消去しますか？')) {
+        resetCircuitWorkingData();
+        renderCircuitCanvas();
+      }
+    }
+
+    function retryCurrentCircuit() {
+      resetCircuitWorkingData();
+      const prob = getCurrentCircuit();
+      delete appState.circuitAnswered[prob.id];
+      renderApp();
+    }
+
+    function handleTerminalClick(terminal) {
+      if (appState.circuitTool !== 'wire') return;
+
+      if (!appState.circuitSelectedTerminal) {
+        appState.circuitSelectedTerminal = terminal;
+        renderCircuitCanvas();
+      } else {
+        if (appState.circuitSelectedTerminal.id === terminal.id) {
+          appState.circuitSelectedTerminal = null;
+          renderCircuitCanvas();
+          return;
+        }
+
+        const exists = appState.circuitConnections.some(c => 
+          (c.fromId === appState.circuitSelectedTerminal.id && c.toId === terminal.id) ||
+          (c.fromId === terminal.id && c.toId === appState.circuitSelectedTerminal.id)
+        );
+
+        if (!exists) {
+          appState.circuitConnections.push({
+            fromId: appState.circuitSelectedTerminal.id,
+            toId: terminal.id,
+            color: appState.circuitWireColor
+          });
+        }
+
+        appState.circuitSelectedTerminal = null;
+        renderCircuitCanvas();
+      }
+    }
+
+    function checkCircuitSolution() {
+      const prob = getCurrentCircuit();
+      if (!prob) return;
+
+      const parent = {};
+      prob.terminals.forEach(t => { parent[t.id] = t.id; });
+      function find(i) {
+        if (parent[i] === i) return i;
+        return parent[i] = find(parent[i]);
+      }
+      function union(i, j) {
+        const rootI = find(i);
+        const rootJ = find(j);
+        if (rootI !== rootJ) parent[rootI] = rootJ;
+      }
+
+      appState.circuitConnections.forEach(conn => union(conn.fromId, conn.toId));
+
+      let isCorrect = true;
+      let reason = "";
+
+      for (const group of prob.requiredGroups) {
+        const first = group[0];
+        for (let i = 1; i < group.length; i++) {
+          if (find(first) !== find(group[i])) {
+            isCorrect = false;
+            reason = "一部の端子が正しく接続されていません（未結線）。";
+            break;
+          }
+        }
+        if (!isCorrect) break;
+      }
+
+      if (isCorrect) {
+        for (let g1 = 0; g1 < prob.requiredGroups.length; g1++) {
+          for (let g2 = g1 + 1; g2 < prob.requiredGroups.length; g2++) {
+            const root1 = find(prob.requiredGroups[g1][0]);
+            const root2 = find(prob.requiredGroups[g2][0]);
+            if (root1 === root2) {
+              isCorrect = false;
+              reason = "電源の正極と接地極、または異なる系統が短絡（ショート）しています！";
+              break;
+            }
+          }
+          if (!isCorrect) break;
+        }
+      }
+
+      appState.circuitAnswered[prob.id] = { isCorrect: isCorrect };
+      if (!isCorrect) {
+        appState.circuitMistakes.add(prob.id);
+      } else {
+        appState.circuitMistakes.delete(prob.id);
+      }
+      saveStorage();
+
+      const fb = document.getElementById('circuitFeedbackBox');
+      fb.classList.remove('hidden');
+      if (isCorrect) {
+        fb.className = "p-3.5 rounded-xl border bg-emerald-50 border-emerald-300 flex flex-wrap items-center justify-between gap-3 fade-in";
+        document.getElementById('circuitFeedbackIcon').textContent = "⭕";
+        document.getElementById('circuitFeedbackTitle').textContent = "結線成功！完璧な複線図です！";
+        document.getElementById('circuitFeedbackTitle').className = "font-bold text-sm text-emerald-900";
+        document.getElementById('circuitFeedbackSub').textContent = "結線ステップとリングスリーブ圧着マークを確認してマスターしましょう。";
+      } else {
+        fb.className = "p-3.5 rounded-xl border bg-rose-50 border-rose-300 flex flex-wrap items-center justify-between gap-3 fade-in";
+        document.getElementById('circuitFeedbackIcon').textContent = "❌";
+        document.getElementById('circuitFeedbackTitle').textContent = "誤配線があります…「要復習」に追加しました！";
+        document.getElementById('circuitFeedbackTitle').className = "font-bold text-sm text-rose-900";
+        document.getElementById('circuitFeedbackSub').textContent = `${reason} 右の見本ガイドONで確認できます。`;
+      }
+
+      renderCircuitExplanation();
+      updateStatsUI();
+    }
+
+    function renderCircuitCanvas() {
+      const prob = getCurrentCircuit();
+      if (!prob) return;
+
+      const guideGroup = document.getElementById('guideLinesGroup');
+      const userGroup = document.getElementById('userWiresGroup');
+      const compGroup = document.getElementById('componentsGroup');
+
+      guideGroup.innerHTML = '';
+      if (appState.openBookMode && prob.guideLines) {
+        guideGroup.classList.remove('hidden');
+        document.getElementById('guideOverlayBadge').classList.remove('hidden');
+        prob.guideLines.forEach(g => {
+          const t1 = prob.terminals.find(t => t.id === g.from);
+          const t2 = prob.terminals.find(t => t.id === g.to);
+          if (t1 && t2) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', t1.x);
+            line.setAttribute('y1', t1.y);
+            line.setAttribute('x2', t2.x);
+            line.setAttribute('y2', t2.y);
+            line.setAttribute('stroke', g.color || '#38bdf8');
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('stroke-linecap', 'round');
+            guideGroup.appendChild(line);
+          }
+        });
+      } else {
+        guideGroup.classList.add('hidden');
+        document.getElementById('guideOverlayBadge').classList.add('hidden');
+      }
+
+      userGroup.innerHTML = '';
+      appState.circuitConnections.forEach(conn => {
+        const t1 = prob.terminals.find(t => t.id === conn.fromId);
+        const t2 = prob.terminals.find(t => t.id === conn.toId);
+        if (t1 && t2) {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', t1.x);
+          line.setAttribute('y1', t1.y);
+          line.setAttribute('x2', t2.x);
+          line.setAttribute('y2', t2.y);
+          line.setAttribute('stroke', conn.color);
+          line.setAttribute('stroke-width', '3.5');
+          line.setAttribute('stroke-linecap', 'round');
+          userGroup.appendChild(line);
+        }
+      });
+
+      compGroup.innerHTML = '';
+
+      prob.components.forEach(c => {
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', c.x);
+        text.setAttribute('y', c.y);
+        text.setAttribute('fill', '#94a3b8');
+        text.setAttribute('font-size', '11');
+        text.setAttribute('font-weight', 'bold');
+        text.textContent = c.label;
+        compGroup.appendChild(text);
+      });
+
+      prob.terminals.forEach(t => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.style.cursor = 'pointer';
+
+        const isSelected = appState.circuitSelectedTerminal && (appState.circuitSelectedTerminal.id === t.id);
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', t.x);
+        circle.setAttribute('cy', t.y);
+        circle.setAttribute('r', isSelected ? '8' : '6');
+        circle.setAttribute('fill', t.color || '#38bdf8');
+        circle.setAttribute('stroke', isSelected ? '#f59e0b' : '#ffffff');
+        circle.setAttribute('stroke-width', isSelected ? '3' : '2');
+        circle.setAttribute('class', isSelected ? 'terminal-node terminal-selected' : 'terminal-node');
+
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', t.x);
+        label.setAttribute('y', t.y + 16);
+        label.setAttribute('fill', '#e2e8f0');
+        label.setAttribute('font-size', '9.5');
+        label.setAttribute('font-family', 'sans-serif');
+        label.setAttribute('text-anchor', 'middle');
+        label.textContent = t.name;
+
+        g.appendChild(circle);
+        g.appendChild(label);
+        g.addEventListener('click', () => handleTerminalClick(t));
+        compGroup.appendChild(g);
+      });
+    }
+
+    function renderCircuitSection() {
+      const prob = getCurrentCircuit();
+      if (!prob) return;
+
+      const listGroup = document.getElementById('circuitListGroup');
+      listGroup.innerHTML = '';
+      CIRCUIT_PROBLEMS.forEach((p, idx) => {
+        const btn = document.createElement('button');
+        const isActive = (idx === appState.circuitIndex);
+        const hasWrong = appState.circuitMistakes.has(p.id);
+
+        btn.className = `px-2.5 py-1 rounded-md text-[11px] font-bold whitespace-nowrap transition flex items-center gap-1 ${
+          isActive ? 'bg-indigo-600 text-white shadow' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+        }`;
+        btn.innerHTML = `${hasWrong ? '<span class="text-rose-500">⚠</span>' : ''} 第${idx + 1}問`;
+        btn.addEventListener('click', () => {
+          appState.circuitIndex = idx;
+          resetCircuitWorkingData();
+          renderApp();
+        });
+        listGroup.appendChild(btn);
+      });
+
+      document.getElementById('circuitTitle').textContent = prob.title;
+      document.getElementById('circuitSingleLineContainer').innerHTML = prob.singleLineSvg;
+
+      renderCircuitCanvas();
+      renderCircuitExplanation();
+    }
+
+    function renderCircuitExplanation() {
+      const prob = getCurrentCircuit();
+      if (!prob) return;
+      const ansInfo = appState.circuitAnswered[prob.id];
+      const show = appState.openBookMode || (ansInfo && ansInfo.isCorrect);
+
+      const locked = document.getElementById('circuitExplanationLocked');
+      const content = document.getElementById('circuitExplanationContent');
+      const badge = document.getElementById('circuitOpenBookBadge');
+
+      if (appState.openBookMode) badge.classList.remove('hidden');
+      else badge.classList.add('hidden');
+
+      if (show) {
+        locked.classList.add('hidden');
+        content.classList.remove('hidden');
+
+        document.getElementById('modelCircuitDiagramContainer').innerHTML = prob.singleLineSvg;
+
+        const list = document.getElementById('circuitStepsList');
+        list.innerHTML = '';
+        prob.steps.forEach(st => {
+          const div = document.createElement('div');
+          div.className = "flex items-start gap-1.5 text-slate-700";
+          div.innerHTML = `<span class="text-emerald-600 font-bold shrink-0">✔</span> <span>${st}</span>`;
+          list.appendChild(div);
+        });
+
+        document.getElementById('circuitSleeveSummary').textContent = prob.sleeveCheat;
+      } else {
+        locked.classList.remove('hidden');
+        content.classList.add('hidden');
+      }
+    }
+
+    function renderApp() {
+      if (appState.activeTab === 'quiz') renderQuizSection();
+      else renderCircuitSection();
+      updateStatsUI();
+    }
+
+    function updateStatsUI() {
+      const totalQuiz = appState.quizStats.correct + appState.quizStats.wrong;
+      const acc = totalQuiz > 0 ? Math.round((appState.quizStats.correct / totalQuiz) * 100) : 0;
+      document.getElementById('statCorrect').textContent = appState.quizStats.correct;
+      document.getElementById('statWrong').textContent = appState.quizStats.wrong;
+      document.getElementById('statAccuracy').textContent = `${acc}%`;
+
+      const mistakesCount = appState.activeTab === 'quiz' 
+        ? appState.quizMistakes.size 
+        : appState.circuitMistakes.size;
+      document.getElementById('reviewBadge').textContent = mistakesCount;
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

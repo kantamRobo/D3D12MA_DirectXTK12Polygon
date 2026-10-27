@@ -9,7 +9,6 @@
 #include <assimp/Importer.hpp>
 #include <DescriptorHeap.h>
 // DXC shader compiler API (Windows SDK 10.0.17134+)
-// If your SDK is older, copy dxcapi.h from the DirectX Shader Compiler release.
 #include <atlbase.h>        // Common COM helpers.
 #include <dxcapi.h>         // Be sure to link with dxcompiler.lib.
 #include <d3d12shader.h>    // Shader reflection.
@@ -21,15 +20,25 @@ using namespace DirectX;
 
 // Align value up to the given alignment (must be a power of two).
 #define ALIGN_UP(value, alignment) (((UINT64)(value) + (alignment) - 1) & ~((UINT64)(alignment) - 1))
-// Per-object constant buffer: material properties of the sphere.
+
+// Per-object constant buffer: legacy sphere constant buffer
 struct SphereConstantBuffer
 {
     XMFLOAT4 albedo; // Base diffuse color (RGBA)
 };
 
+// Per-object constant buffer: Lambert reflection properties (16-byte aligned members)
+struct alignas(16) LambertConstantBuffer
+{
+    DirectX::XMFLOAT4 LightDir;       // Direction of light
+    DirectX::XMFLOAT4 LightColor;     // Light color
+    DirectX::XMFLOAT4 MaterialColor;  // Material color
+    DirectX::XMFLOAT4 AmbientColor;   // Ambient color
+};
+
 // ---------------------------------------------------------------------------
 // Global root-signature parameter slots.
-// Must match the HLSL register bindings in RaytracingSphere.hlsl.
+// Must match the HLSL register bindings in AssimpRay.hlsl.
 // ---------------------------------------------------------------------------
 namespace SphereRaytracing
 {
@@ -37,11 +46,11 @@ namespace SphereRaytracing
     {
         enum Value
         {
-            OutputViewSlot = 0,  // UAV  u0  - raytracing output texture
-            AccelerationStructure = 1,  // SRV  t0  - top-level acceleration structure
-            SceneConstant = 2,  // CBV  b0  - SceneConstantBuffer
-            VertexBuffers = 3,  // SRV  t1,t2 - index + vertex buffers
-            SphereConstant = 4,  // CBV  b1  - SphereConstantBuffer
+            OutputViewSlot = 0,        // UAV  u0  - raytracing output texture
+            AccelerationStructure = 1, // SRV  t0  - top-level acceleration structure
+            SceneConstant = 2,         // CBV  b0  - SceneConstantBuffer
+            VertexBuffers = 3,         // SRV  t1,t2 - index + vertex buffers
+            SphereConstant = 4,        // CBV  b1  - LambertConstantBuffer / SphereConstantBuffer
             Count
         };
     }
@@ -74,15 +83,14 @@ class Model
 public:
     ~Model();
     Model() {};
-   
+
     // ---------------------------------------------------------------------------
-// Shader entry-point / hit-group names (must match RaytracingSphere.hlsl)
-// ---------------------------------------------------------------------------
+    // Shader entry-point / hit-group names (must match AssimpRay.hlsl)
+    // ---------------------------------------------------------------------------
     const wchar_t* c_raygenShaderName = L"MyRaygenShader";
     const wchar_t* c_closestHitShaderName = L"MyClosestHitShader";
     const wchar_t* c_missShaderName = L"MyMissShader";
     const wchar_t* c_hitGroupName = L"MyHitGroup";
-
 
     // -----------------------------------------------------------------------
     // DXR interfaces (obtained via QueryInterface from the base device/list)
@@ -99,11 +107,18 @@ public:
     UINT m_descriptorSize = 0;
     UINT m_descriptorsAllocated = 0;
 
-    // Scene and sphere constant buffers (persistently mapped upload heap)
-    SceneConstantBuffer  m_sceneCBData = {};
-    SphereConstantBuffer m_sphereCBData = {};
+    // Scene and sphere/lambert constant buffers (persistently mapped upload heap)
+    SceneConstantBuffer   m_sceneCBData = {};
+    SphereConstantBuffer  m_sphereCBData = {};
+    LambertConstantBuffer m_lambertCBData = {};
+
     Microsoft::WRL::ComPtr<ID3D12Resource> m_sceneCBResource;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_sphereCBResource;
+
+    // D3D12MA-managed Lambert Constant Buffer
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_lambertCbResource;
+    D3D12MA::Allocation*                   m_lambertCbAllocation = nullptr;
+    void*                                  m_pMappedLambertData = nullptr;
 
     // Geometry (vertex/index buffers via D3D12MA)
     Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBuffer;
@@ -112,7 +127,7 @@ public:
     UINT m_indexCount = 0;
 
     // D3D12MA allocator + allocations for geometry buffers
-    D3D12MA::Allocator* m_allocator = nullptr;
+    D3D12MA::Allocator*  m_allocator = nullptr;
     D3D12MA::Allocation* m_vertexAllocation = nullptr;
     D3D12MA::Allocation* m_indexAllocation = nullptr;
 
@@ -126,8 +141,7 @@ public:
     // Raytracing output UAV texture
     Microsoft::WRL::ComPtr<ID3D12Resource> m_raytracingOutput;
     D3D12_GPU_DESCRIPTOR_HANDLE            m_raytracingOutputUAVGpuDescriptor = {};
-    
-   
+
     Microsoft::WRL::ComPtr<ID3D12Resource> m_rayGenShaderTable;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_missShaderTable;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_hitGroupShaderTable;
@@ -135,28 +149,29 @@ public:
     // Back-buffer dimensions
     UINT m_width = 800;
     UINT m_height = 600;
-	std::vector<VertexPositionNormalColorTexture> vertices;
+    std::vector<VertexPositionNormalColorTexture> vertices;
     std::vector<uint16_t> indices;
     bool LoadModel(const char* path);
-	
+
     std::vector<DirectX::VertexPositionNormalColorTexture> GenerateVertices(const char* path);
-    //Model.cppÇ≈íËã`Ç≥ÇÍÇΩä÷êîÇÃêÈåæ
-	void BuildGeometry(DX::DeviceResources* DR);
+    void BuildGeometry(DX::DeviceResources* DR);
     void LoadAssets(DX::DeviceResources* DR, const char* filePath);
-	void CreateConstantBuffers(ID3D12Device* device);
+    void CreateConstantBuffers(ID3D12Device* device);
+    HRESULT CreateLambertConstantBuffer(D3D12MA::Allocator* allocator);
+    void UpdateLambertCB(const LambertConstantBuffer& data);
     void LoadCompiledShaderLibrary(LPCWSTR csoPath, void** ppBytecode, SIZE_T* pBytecodeSize, std::vector<BYTE>& outBlob);
     void CreateRaytracingPipelineStateObject(DX::DeviceResources* DR);
-	void CreateGlobalRootSignature(ID3D12Device* device);
-	void CreateDescriptorHeap(ID3D12Device* device);
-	void CompileDXRShaderLibrary(
-		LPCWSTR shaderPath,
-		void** ppBytecode,
-		SIZE_T* pBytecodeSize,
-		std::vector<BYTE>& outBlob);
-	void BuildAccelerationStructures(DX::DeviceResources* DR);
-	void CreateRaytracingOutputResource(DX::DeviceResources* DR);
-	void BuildShaderTables(ID3D12Device* device);
-	void UpdateSceneConstants(DX::DeviceResources* DR);
+    void CreateGlobalRootSignature(ID3D12Device* device);
+    void CreateDescriptorHeap(ID3D12Device* device);
+    void CompileDXRShaderLibrary(
+        LPCWSTR shaderPath,
+        void** ppBytecode,
+        SIZE_T* pBytecodeSize,
+        std::vector<BYTE>& outBlob);
+    void BuildAccelerationStructures(DX::DeviceResources* DR);
+    void CreateRaytracingOutputResource(DX::DeviceResources* DR);
+    void BuildShaderTables(ID3D12Device* device);
+    void UpdateSceneConstants(DX::DeviceResources* DR);
     void Render(DX::DeviceResources* DR);
     void CopyRaytracingOutputToBackbuffer(DX::DeviceResources* DR);
     // Allocate a descriptor from the heap; returns the heap index.
@@ -172,6 +187,4 @@ public:
     void OnWindowSizeChanged(UINT width, UINT height, DX::DeviceResources* DR);
     void CreateRaytracingInterfaces(DX::DeviceResources* DR);
     void LoadAssets(DX::DeviceResources* DR);
-    
 };
-

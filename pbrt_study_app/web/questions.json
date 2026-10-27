@@ -1,0 +1,472 @@
+{
+  "chapters": [
+    {
+      "id": 2,
+      "title": "Chapter 2: Monte Carlo Integration",
+      "subtitle": "モンテカルロ積分・確率密度関数・分散低減",
+      "quizzes": [
+        {
+          "id": "q2-1",
+          "question": "モンテカルロ積分の推定値の標準誤差（収束率）に関する記述として、最も適切なものはどれか？",
+          "options": [
+            "積分の次元数 d に比例して収束が遅くなり、O(N^(-1/d)) で収束する",
+            "サンプリング数 N に対して O(1 / √N) で収束し、積分の次元数 d に直接依存しない",
+            "サンプル数を 2 倍に増やすと、分散と標準偏差はともに 1/4 に減少する",
+            "均一乱数を用いた場合のみ O(1/N) で収束し、準乱数では低下する"
+          ],
+          "answer": 1,
+          "explanation": "【キーワード: モンテカルロ収束率 O(1/√N)】\nモンテカルロ推定量の標準偏差はサンプリング数 N に対して O(N^(-1/2)) で減少します。重要な性質として、この収束率は『被積分関数の次元数 d に直接依存しない』ため、レンダリング方程式のような超高次元積分において台形則などの決定論的手法（O(N^(-1/d))）に比べて圧倒的に有利となります。"
+        },
+        {
+          "id": "q2-2",
+          "question": "多重重点サンプリング (Multiple Importance Sampling: MIS) の Balance Heuristic における重み付け関数 w_i(x) の定義として正しいものはどれか？（サンプル数 n_i、PDF p_i(x) とする）",
+          "options": [
+            "w_i(x) = p_i(x) / Σ_j p_j(x)",
+            "w_i(x) = (n_i * p_i(x)) / Σ_j (n_j * p_j(x))",
+            "w_i(x) = (p_i(x))^2 / Σ_j (p_j(x))^2",
+            "w_i(x) = 1 / (n_i * p_i(x))"
+          ],
+          "answer": 1,
+          "explanation": "【キーワード: MIS・Balance Heuristic】\n複数のサンプリング戦略（例: 光源サンプリングとBSDFサンプリング）を統合する MIS の Balance Heuristic では、重みは w_i(x) = (n_i * p_i(x)) / Σ_j (n_j * p_j(x)) と定義されます。これにより、いずれかの戦略で極端に PDF が小さくなる領域のスパイクノイズを抑え、理論的にほぼ最適な分散低減を実現します。"
+        },
+        {
+          "id": "q2-3",
+          "question": "1次元の連続確率密度関数 p(x) から逆関数法 (Inversion Method) でサンプル X を生成する手順として正しいものはどれか？",
+          "options": [
+            "累積分布関数 P(x) = ∫_{-∞}^x p(t)dt を求め、一様乱数 U ∈ [0, 1) に対して X = P^(-1)(U) を計算する",
+            "p(x) の導関数 p'(x) を求め、一様乱数 U を代入して X = p'(U) とする",
+            "確率密度関数 p(x) の逆関数 p^(-1)(U) に一様乱数 U を直接代入する",
+            "p(x) の最大値 M を求め、受容棄却法として U_1 < p(U_2)/M を判定する"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: 逆関数法 (Inversion Method)】\n逆関数法では、まず PDF p(x) を積分して累積分布関数 (CDF) P(x) を求めます。P(x) は単調増加で値域 [0, 1] を取るため、その逆関数 P^(-1) に一様乱数 U ∈ [0, 1) を与えることで、目的の分布に従う乱数 X = P^(-1)(U) が得られます。"
+        }
+      ],
+      "coding": {
+        "id": "c2",
+        "title": "モンテカルロ積分推定量 F_N の計算",
+        "description": "被積分関数 f(X_i) の値と確率密度関数 p(X_i) の値のペア配列 samples: &[(f32, f32)] を受け取り、モンテカルロ推定量 F_N = (1/N) Σ (f(X_i) / p(X_i)) を計算して返す関数を実装してください。\n※配列が空の場合は 0.0 を返してください。",
+        "initial_code": "// Chapter 2: Monte Carlo Estimator\npub fn monte_carlo_estimate(samples: &[(f32, f32)]) -> f32 {\n    // TODO: ここに実装を記述してください\n    // samples の各要素は (f_val, pdf_val) です\n    0.0\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_mc_estimate() {\n        let samples = vec![\n            (2.0, 0.5), // 2.0 / 0.5 = 4.0\n            (3.0, 1.0), // 3.0 / 1.0 = 3.0\n            (1.5, 0.5), // 1.5 / 0.5 = 3.0\n            (6.0, 1.0), // 6.0 / 1.0 = 6.0\n        ];\n        // 平均 = (4 + 3 + 3 + 6) / 4 = 16 / 4 = 4.0\n        let est = monte_carlo_estimate(&samples);\n        assert!((est - 4.0).abs() < 1e-4, \"Expected 4.0, got {}\", est);\n    }\n\n    #[test]\n    fn test_empty() {\n        let samples: Vec<(f32, f32)> = vec![];\n        assert_eq!(monte_carlo_estimate(&samples), 0.0);\n    }\n}",
+        "solution": "pub fn monte_carlo_estimate(samples: &[(f32, f32)]) -> f32 {\n    if samples.is_empty() {\n        return 0.0;\n    }\n    let n = samples.len() as f32;\n    let sum: f32 = samples.iter().map(|&(f, p)| f / p).sum();\n    sum / n\n}",
+        "hint": "iter().map(|&(f, p)| f / p).sum::<f32>() を用いて総和を求め、サンプル数 N で割ります。"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Chapter 3: Geometry and Transformations",
+      "subtitle": "幾何構造・法線変換・光線・BoundingBox",
+      "quizzes": [
+        {
+          "id": "q3-1",
+          "question": "3DCG空間において、サーフェスの法線ベクトル (Normal) を4x4変換行列 M で幾何学的に正しく変換するための行列はどれか？",
+          "options": [
+            "変換行列 M そのもの",
+            "変換行列 M の転置行列 M^T",
+            "変換行列 M の逆転置行列 (M^(-1))^T",
+            "変換行列 M の逆行列 M^(-1)"
+          ],
+          "answer": 2,
+          "explanation": "【キーワード: 法線の変換規則 (Inverse Transpose)】\n法線 n は接ベクトル t と常に直交 (n^T t = 0) でなければなりません。接ベクトルが M で変換されて t' = M t となるとき、(n')^T t' = n^T t = 0 を満たすためには、n' = (M^(-1))^T n である必要があります。非一様スケールがかかった場合、通常の行列 M を掛けると法線の直交性が崩れます。"
+        },
+        {
+          "id": "q3-2",
+          "question": "光線 (Ray) の数学的パラメトリック表現 r(t) = o + t * d における t_max や微小オフセット (ε) の役割として最も適切なものはどれか？",
+          "options": [
+            "浮動小数点演算の丸め誤差によるレイの自身のサーフェスとの誤交差（自己交差）を防ぐ",
+            "光の速度に制限を設けて、相対論的ドップラー効果を計算する",
+            "レイの長さを常に 1.0 に正規化して交差判定を単純化する",
+            "交差判定の深さ制限を設定して再帰呼び出しスタックのオーバーフローを防ぐ"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: 自己交差 (Self-Intersection)・εオフセット】\n交差点から次の反射レイを飛ばす際、浮動小数点精度の限界により、新しく生成したレイの原点がサーフェスのわずかに内側または外側に位置してしまいます。t_min に ε（イプシロン）を設定することで、放出した自身のサーフェスと即座に誤交差してしまう現象（シャドウアクネなど）を防止します。"
+        },
+        {
+          "id": "q3-3",
+          "question": "軸並行境界ボックス (AABB) と光線のスラブ法 (Slab Method) による交差判定において、レイがボックスと交差する条件はどれか？（各軸のスラブ交差区間 [t_min_i, t_max_i] に対し、t_enter = max(t_min_x, t_min_y, t_min_z), t_exit = min(t_max_x, t_max_y, t_max_z) とする）",
+          "options": [
+            "t_enter <= t_exit かつ t_exit > 0",
+            "t_enter >= t_exit かつ t_enter > 0",
+            "t_enter + t_exit == 0",
+            "t_enter * t_exit < 0"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: スラブ法 (Slab Method)・t_enter <= t_exit】\nAABB は 3組の平行な無限平面（スラブ）の積集合です。レイがボックスに入る時刻 t_enter は各スラブに入った最後の時刻 (max)、出る時刻 t_exit は最初のスラブを出た時刻 (min) となります。交差する条件は t_enter <= t_exit であり、かつボックスがレイの前方にある（t_exit > 0）ことです。"
+        }
+      ],
+      "coding": {
+        "id": "c3",
+        "title": "Ray の指定パラメータ t における位置計算",
+        "description": "光線構造体 Ray { origin: [f32; 3], dir: [f32; 3] } に対して、指定されたパラメータ t における 3次元位置 r(t) = origin + t * dir を計算して [f32; 3] を返すメソッド at を実装してください。",
+        "initial_code": "// Chapter 3: Ray structure\n#[derive(Debug, Clone, PartialEq)]\npub struct Ray {\n    pub origin: [f32; 3],\n    pub dir: [f32; 3],\n}\n\nimpl Ray {\n    pub fn new(origin: [f32; 3], dir: [f32; 3]) -> Self {\n        Self { origin, dir }\n    }\n\n    pub fn at(&self, t: f32) -> [f32; 3] {\n        // TODO: origin + t * dir を計算して返してください\n        [0.0, 0.0, 0.0]\n    }\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_ray_at() {\n        let ray = Ray::new([1.0, 2.0, 3.0], [0.0, 1.0, -2.0]);\n        let p = ray.at(2.5);\n        assert_eq!(p, [1.0, 4.5, -2.0]);\n    }\n\n    #[test]\n    fn test_ray_at_zero() {\n        let ray = Ray::new([5.0, -3.0, 2.0], [1.0, 2.0, 3.0]);\n        assert_eq!(ray.at(0.0), [5.0, -3.0, 2.0]);\n    }\n}",
+        "solution": "impl Ray {\n    pub fn new(origin: [f32; 3], dir: [f32; 3]) -> Self {\n        Self { origin, dir }\n    }\n\n    pub fn at(&self, t: f32) -> [f32; 3] {\n        [\n            self.origin[0] + t * self.dir[0],\n            self.origin[1] + t * self.dir[1],\n            self.origin[2] + t * self.dir[2],\n        ]\n    }\n}",
+        "hint": "各成分ごとに origin[i] + t * dir[i] を計算して 3要素の配列を作成します。"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Chapter 4: Radiometry, Spectra, and Color",
+      "subtitle": "放射測定・立体角・放射輝度・分光スペクトル",
+      "quizzes": [
+        {
+          "id": "q4-1",
+          "question": "レンダリング方程式で中心となる物理量『放射輝度 (Radiance: L)』の単位および定義として正しいものはどれか？",
+          "options": [
+            "単位面積あたりの放射束 [W / m^2]",
+            "単位立体角あたりの放射束 [W / sr]",
+            "単位投影面積・単位立体角あたりの放射束 [W / (m^2 * sr)]",
+            "単位時間・単位体積あたりの光子エネルギー [J / m^3]"
+          ],
+          "answer": 2,
+          "explanation": "【キーワード: 放射輝度 (Radiance: L)】\n放射輝度 L は、サーフェスの法線方向に対する投影面積 (dA cosθ) と立体角 (dω) あたりの放射束 (dΦ) として L = d^2Φ / (dA cosθ dω) で定義され、単位は [W / (m^2 * sr)] です。幾何光学において、放射輝度は光線に沿って真空中を減衰せずに保存される極めて重要な性質を持ちます。"
+        },
+        {
+          "id": "q4-2",
+          "question": "半径 r の全球面全体の立体角 (Solid Angle) の大きさとして正しいものはどれか？",
+          "options": [
+            "π ステラジアン (sr)",
+            "2π ステラジアン (sr)",
+            "4π ステラジアン (sr)",
+            "4/3 π ステラジアン (sr)"
+          ],
+          "answer": 2,
+          "explanation": "【キーワード: 立体角 (Solid Angle)】\n立体角は球面上に投影された面積を半径の二乗で割った無次元量 (sr) です。全球面の表面積は 4π r^2 であるため、全球全体の立体角は常に 4π [sr]（半球の場合は 2π [sr]）となります。"
+        },
+        {
+          "id": "q4-3",
+          "question": "PBRT-v4 が波長ごとにサンプリングした分光表現 (SampledSpectrum) を採用している最大の利点はどれか？",
+          "options": [
+            "RGB の 3成分よりも常にメモリ消費量が少なく高速に計算できるため",
+            "異なる波長分布が同じ RGB に知覚されるメタメリズム (条件等色) に起因する乗算合成時の色誤差や非物理現象を回避できるため",
+            "ガンマ補正が一切不要になるため",
+            "ディスプレイの sRGB 色域に直接マッピングできるため"
+          ],
+          "answer": 1,
+          "explanation": "【キーワード: SampledSpectrum・メタメリズムの回避】\n光の反射・吸収は波長ごとに物理的に生じる現象です。RGB 3成分の積として反射を計算すると、人間の知覚上は同じ色に見える異なるスペクトル（メタメリズム）に対して誤った乗算結果を生じさせます。波長ベースの SampledSpectrum を用いることで物理的に正確な光の相互作用を再現できます。"
+        }
+      ],
+      "coding": {
+        "id": "c4",
+        "title": "4波長 SampledSpectrum の要素ごとの乗算と平均値",
+        "description": "4波長サンプルを保持する分光スペクトル構造体 Spectrum4 { values: [f32; 4] } に対し、要素ごとの乗算 mul と、4成分の相加平均 average を計算するメソッドを実装してください。",
+        "initial_code": "// Chapter 4: SampledSpectrum\n#[derive(Debug, Clone, Copy, PartialEq)]\npub struct Spectrum4 {\n    pub values: [f32; 4],\n}\n\nimpl Spectrum4 {\n    pub fn new(values: [f32; 4]) -> Self {\n        Self { values }\n    }\n\n    pub fn mul(&self, other: &Spectrum4) -> Spectrum4 {\n        // TODO: 各成分同士の積を計算して新しい Spectrum4 を返してください\n        Spectrum4::new([0.0; 4])\n    }\n\n    pub fn average(&self) -> f32 {\n        // TODO: 4成分の平均値を返してください\n        0.0\n    }\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_spectrum_mul() {\n        let s1 = Spectrum4::new([1.0, 2.0, 3.0, 4.0]);\n        let s2 = Spectrum4::new([0.5, 0.5, 2.0, 0.25]);\n        let res = s1.mul(&s2);\n        assert_eq!(res.values, [0.5, 1.0, 6.0, 1.0]);\n    }\n\n    #[test]\n    fn test_spectrum_average() {\n        let s = Spectrum4::new([2.0, 4.0, 6.0, 8.0]);\n        assert_eq!(s.average(), 5.0);\n    }\n}",
+        "solution": "impl Spectrum4 {\n    pub fn new(values: [f32; 4]) -> Self {\n        Self { values }\n    }\n\n    pub fn mul(&self, other: &Spectrum4) -> Spectrum4 {\n        Spectrum4::new([\n            self.values[0] * other.values[0],\n            self.values[1] * other.values[1],\n            self.values[2] * other.values[2],\n            self.values[3] * other.values[3],\n        ])\n    }\n\n    pub fn average(&self) -> f32 {\n        (self.values[0] + self.values[1] + self.values[2] + self.values[3]) / 4.0\n    }\n}",
+        "hint": "乗算は [self.values[i] * other.values[i]]、平均値は合計を 4.0 で割ります。"
+      }
+    },
+    {
+      "id": 5,
+      "title": "Chapter 5: Cameras and Film",
+      "subtitle": "カメラ幾何・被写界深度・Ray Differential",
+      "quizzes": [
+        {
+          "id": "q5-1",
+          "question": "ピンホールカメラにおいて、視野角 (FOV: Field of View) θ とフィルム幅 w、焦点距離 f の幾何学的関係式として正しいものはどれか？",
+          "options": [
+            "tan(θ / 2) = w / (2 * f)",
+            "sin(θ) = w / f",
+            "cos(θ / 2) = f / w",
+            "tan(θ) = 2 * w / f"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: ピンホールカメラ・画角と焦点距離】\nカメラ中心からフィルム面までの直角三角形を考えると、半画角 θ/2 の対辺の長さはフィルム幅の半分 w/2、隣辺は焦点距離 f となります。したがって tan(θ/2) = (w/2) / f = w / (2f) が成り立ちます。"
+        },
+        {
+          "id": "q5-2",
+          "question": "薄肉レンズモデル (Thin Lens Model) において、被写界深度 (Depth of Field) とボケ（錯乱円）を発生させるために必要なサンプリング処理はどれか？",
+          "options": [
+            "ピクセル内のサンプリング位置をジッターさせる",
+            "有限な半径を持つレンズディスク上の点 (Lens Sample) を一様サンプリングし、焦点面上の同一合焦点へ光線を向ける",
+            "シャッタースピードに合わせて時間 t をサンプリングする",
+            "光の波長 λ をランダムに選んで屈折率を変化させる"
+          ],
+          "answer": 1,
+          "explanation": "【キーワード: 薄肉レンズ・レンズサンプリング】\nピンホール（点）ではなく有限の開口部（レンズ瞳）を持つカメラでは、レンズディスク上のランダムな点 p_lens から、焦点面 (Focal Plane) 上のピンホールレイの交点 p_focus へ向かう光線を生成することで、焦点面以外にある物体がレンズ面全体で積分され、被写界深度によるボケが生じます。"
+        },
+        {
+          "id": "q5-3",
+          "question": "PBRT の RayDifferential が保持する光線の微小変化 (rx_origin, ry_origin, rx_dir, ry_dir) の主目的はどれか？",
+          "options": [
+            "隣接ピクセルに対応する光線フットプリント（投影面積）を推定し、テクスチャフィルタリングのミップマップ LOD を決定する",
+            "モンテカルロ積分の分散を勾配降下法で削減する",
+            "ボリューム媒質中の光子散乱シミュレーション",
+            "カメラの露出補正（トーンマッピング）の自動計算"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: RayDifferential・テクスチャフットプリント】\nRayDifferential は隣接ピクセル (x+1, y) および (x, y+1) へ向かう補助光線の差分情報を保持します。サーフェスとの交差時に UV 座標の偏導関数 (∂u/∂x, ∂v/∂y など) を算出でき、テクスチャがエイリアシングを起こさない適切なミップマップレベル (LOD) を物理的に選択できます。"
+        }
+      ],
+      "coding": {
+        "id": "c5",
+        "title": "正規化スクリーン座標からカメラレイ方向の生成",
+        "description": "原点 [0,0,0] に位置し +Z 方向（前方を [0, 0, 1]）を向く単純化されたピンホールカメラにおいて、正規化スクリーン座標 (ndc_x, ndc_y) ∈ [-1, 1]^2 とアスペクト比考慮の tan(fov/2) パラメータ fov_tan を受け取り、正規化されたレイ方向ベクトル [dx, dy, dz] を計算して返す関数 generate_ray_dir を実装してください。\n※方向ベクトルは長さを 1.0 に正規化 (normalize) してください。",
+        "initial_code": "// Chapter 5: Camera ray generation\npub fn generate_ray_dir(ndc_x: f32, ndc_y: f32, fov_tan: f32) -> [f32; 3] {\n    // TODO:\n    // dir_x = ndc_x * fov_tan\n    // dir_y = ndc_y * fov_tan\n    // dir_z = 1.0\n    // を正規化して返してください\n    [0.0, 0.0, 1.0]\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_center_ray() {\n        let dir = generate_ray_dir(0.0, 0.0, 1.0);\n        assert_eq!(dir, [0.0, 0.0, 1.0]);\n    }\n\n    #[test]\n    fn test_corner_ray() {\n        let dir = generate_ray_dir(1.0, 1.0, 1.0);\n        let len = (dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2]).sqrt();\n        assert!((len - 1.0).abs() < 1e-4);\n        assert!((dir[0] - 1.0 / 3.0_f32.sqrt()).abs() < 1e-4);\n    }\n}",
+        "solution": "pub fn generate_ray_dir(ndc_x: f32, ndc_y: f32, fov_tan: f32) -> [f32; 3] {\n    let x = ndc_x * fov_tan;\n    let y = ndc_y * fov_tan;\n    let z = 1.0;\n    let len = (x * x + y * y + z * z).sqrt();\n    [x / len, y / len, z / len]\n}",
+        "hint": "x = ndc_x * fov_tan, y = ndc_y * fov_tan, z = 1.0 のベクトルを求め、その長さ sqrt(x^2 + y^2 + z^2) で各成分を割ります。"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Chapter 6: Shapes",
+      "subtitle": "形状表現・幾何交差・Möller–Trumbore法",
+      "quizzes": [
+        {
+          "id": "q6-1",
+          "question": "光線 r(t) = o + t*d と中心 c, 半径 R の球 (p - c)^2 = R^2 の交差判定において解く二次方程式 a*t^2 + 2b*t + c_term = 0 で、d が正規化されている (|d|=1) 場合の a の値はどれか？",
+          "options": [
+            "a = 1.0",
+            "a = R^2",
+            "a = 0.5",
+            "a = |o - c|"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: 球と光線の交差判定】\n代入して整理すると (o + td - c)^2 = R^2 となり、ベクトル oc = o - c とおくと (d・d) t^2 + 2 (oc・d) t + (oc・oc - R^2) = 0 となります。方向ベクトル d が正規化されている場合、d・d = 1.0 となるため二次方程式の係数 a は常に 1.0 となり、計算を簡略化できます。"
+        },
+        {
+          "id": "q6-2",
+          "question": "三角形と光線の高速交差判定法として名高い Möller–Trumbore アルゴリズムの最大の特徴はどれか？",
+          "options": [
+            "三角形の平面方程式 (ax+by+cz+d=0) や平面パラメータを事前に計算・保持することなく、頂点座標から直接重心座標 (u, v) と交差距離 t をクラメルの公式で高速に求める",
+            "三角形を複数の球に分解してバウンディングスフィアで判定する",
+            "三角形の 2D 投影を行い、ピクセルラスタライズで交差を判定する",
+            "交差判定の計算量が O(log N) である"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: Möller–Trumbore アルゴリズム】\nMöller–Trumbore 法は、平面方程式の係数を事前に保存するメモリを節約し、3つの頂点 v0, v1, v2 と光線の原点・方向から、ベクトルの外積・内積（スカラー三重積）を用いて連立方程式を直接解き、重心座標 (u, v) と交差距離 t を一挙に求める効率的なアルゴリズムです。"
+        },
+        {
+          "id": "q6-3",
+          "question": "3Dモデルの幾何学的法線 (Geometric Normal: n_g) とシェーディング法線 (Shading Normal: n_s) の違いに関する記述として正しいものはどれか？",
+          "options": [
+            "n_g は頂点カラーから計算され、n_s は光源位置から計算される",
+            "n_g はポリゴン本来の平面法線であり、n_s は頂点法線の補間や法線マップによって滑らかに見せるための見かけの法線である",
+            "常に n_g == n_s でなければエネルギー保存則に違反する",
+            "n_s はシャドウ判定にのみ使われ、n_g は反射計算にのみ使われる"
+          ],
+          "answer": 1,
+          "explanation": "【キーワード: 幾何法線 vs シェーディング法線】\n幾何法線 n_g は三角形ポリゴンの頂点外積から求まる実際の平坦な法線です。一方、シェーディング法線 n_s は頂点ごとの法線を重心座標でバイリニア補間したり法線マップで摂動させたもので、滑らかな曲面に見せるために用いられます（ただし裏回り光線などの非物理的な境界が生じることがあります）。"
+        }
+      ],
+      "coding": {
+        "id": "c6",
+        "title": "原点を中心とする球と光線の最短交差距離 t の計算",
+        "description": "原点 [0, 0, 0] を中心とする半径 radius の球に対し、光線の原点 origin と正規化された方向 dir を受け取り、光線の前方（t > 0）で交差する最短の距離 t を Option<f32> で返す関数 intersect_sphere を実装してください。交差しない場合やすべて t <= 0 の場合は None を返してください。",
+        "initial_code": "// Chapter 6: Sphere intersection\npub fn intersect_sphere(radius: f32, origin: [f32; 3], dir: [f32; 3]) -> Option<f32> {\n    // TODO: 二次方程式 t^2 + 2b*t + c = 0 を解いてください\n    // b = dot(origin, dir)\n    // c = dot(origin, origin) - radius * radius\n    // 判別式 discriminant = b^2 - c\n    None\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_hit_front() {\n        let t = intersect_sphere(1.0, [0.0, 0.0, -5.0], [0.0, 0.0, 1.0]);\n        assert_eq!(t, Some(4.0)); // 原点中心で半径1なので z=-1 でヒット (-5 + 4 = -1)\n    }\n\n    #[test]\n    fn test_miss() {\n        let t = intersect_sphere(1.0, [0.0, 2.0, -5.0], [0.0, 0.0, 1.0]);\n        assert_eq!(t, None);\n    }\n\n    #[test]\n    fn test_behind() {\n        let t = intersect_sphere(1.0, [0.0, 0.0, 5.0], [0.0, 0.0, 1.0]);\n        assert_eq!(t, None); // 後方にあるためヒットなし\n    }\n}",
+        "solution": "pub fn intersect_sphere(radius: f32, origin: [f32; 3], dir: [f32; 3]) -> Option<f32> {\n    let b = origin[0] * dir[0] + origin[1] * dir[1] + origin[2] * dir[2];\n    let c = (origin[0] * origin[0] + origin[1] * origin[1] + origin[2] * origin[2]) - radius * radius;\n    let disc = b * b - c;\n    if disc < 0.0 {\n        return None;\n    }\n    let sqrt_disc = disc.sqrt();\n    let t0 = -b - sqrt_disc;\n    let t1 = -b + sqrt_disc;\n    if t0 > 1e-4 {\n        Some(t0)\n    } else if t1 > 1e-4 {\n        Some(t1)\n    } else {\n        None\n    }\n}",
+        "hint": "判別式 disc = b*b - c < 0 なら None。解 t = -b - sqrt(disc) が 0 より大きければそれを返し、そうでなければ大きい方の解 -b + sqrt(disc) を確認します。"
+      }
+    },
+    {
+      "id": 7,
+      "title": "Chapter 7: Primitives and Intersection Acceleration",
+      "subtitle": "交差加速構造・BVH・SAHコストモデル",
+      "quizzes": [
+        {
+          "id": "q7-1",
+          "question": "BVH (Bounding Volume Hierarchy) の構築において最も広く使われる SAH (Surface Area Heuristic) コスト関数の式として正しいものはどれか？（親ボックス表面積 S_A、左右子ボックス表面積 S_L, S_R、左右プリミティブ数 N_L, N_R、トラバースコスト c_t、交差コスト c_i とする）",
+          "options": [
+            "Cost = c_t + c_i * [ (S_L / S_A) * N_L + (S_R / S_A) * N_R ]",
+            "Cost = c_t * (N_L + N_R) + c_i * (S_L + S_R)",
+            "Cost = c_i * log2(N_L * N_R)",
+            "Cost = (S_L * S_R) / S_A^2"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: SAH (Surface Area Heuristic)】\n幾何確率論（凸体の幾何確率）に基づき、ランダムな光線が親ボックス A に交差したとき、部分ボックス L に交差する条件付き確率は表面積比 S_L / S_A に等しくなります。したがって推定期待計算コストは、ノード走査コスト c_t に左右の子ノードの交差期待コストを加算した式となります。"
+        },
+        {
+          "id": "q7-2",
+          "question": "HLBVH (Hierarchical Linear BVH) などで用いられる空間充填曲線『モートンコード (Morton Code / Z-order curve)』の主な利点はどれか？",
+          "options": [
+            "3次元の空間座標を 1次元の整数値にマッピングし、ビット操作とソートだけで高速かつ並列に空間クラスタリングを行える",
+            "浮動小数点の NaN を完全に排除できる",
+            "交差判定時に三角関数の計算が不要になる",
+            "ボックスの表面積を常に最小化できる"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: モートンコード (Morton Code)】\nモートンコードは、3次元座標の各ビットを交互に織り交ぜる（ビットインターリーブ）ことで、3次元的な近傍性を保ったまま 1次元の整数に落とし込む手法です。GPU 等で頂点をモートンコード順にラディックスソートするだけで、極めて高速に並列 BVH 構築を行えます。"
+        },
+        {
+          "id": "q7-3",
+          "question": "レンダリング時の BVH 走査（トラバーサル）において、ノードを『平坦化配列 (Flattened BVH / Linear BVH)』に配置するメリットはどれか？",
+          "options": [
+            "ポインタをたどる間接参照をなくし、キャッシュラインへの局所性を高め、スタックベースの深さ優先走査を高速化できる",
+            "メモリ消費量が正確に 1/10 になる",
+            "ツリーの深さが常に平衡ツリー (AVL) になる",
+            "動的なオブジェクトの毎フレーム再構築が不要になる"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: 平坦化 BVH (Linear BVH)】\nポインタを多用するツリー構造はメモリの局所性が悪くキャッシュミスを多発します。連続した配列にノードを先行順深さ優先（Pre-order）等で並べ、子ノードへのオフセット整数を保持することで、CPU/GPU のキャッシュ効率を劇的に改善できます。"
+        }
+      ],
+      "coding": {
+        "id": "c7",
+        "title": "AABBの結合 (Union) と表面積の計算",
+        "description": "3次元 AABB 構造体 BoundingBox { min: [f32; 3], max: [f32; 3] } に対し、2つの AABB を包含する新しい AABB を求める union_box 関数と、自身の表面積を計算する surface_area メソッドを実装してください。\n※直方体の辺長 dx, dy, dz に対し、表面積は 2 * (dx*dy + dy*dz + dz*dx) です。",
+        "initial_code": "// Chapter 7: AABB and Surface Area\n#[derive(Debug, Clone, PartialEq)]\npub struct BoundingBox {\n    pub min: [f32; 3],\n    pub max: [f32; 3],\n}\n\nimpl BoundingBox {\n    pub fn new(min: [f32; 3], max: [f32; 3]) -> Self {\n        Self { min, max }\n    }\n\n    pub fn union_box(&self, other: &BoundingBox) -> BoundingBox {\n        // TODO: 各軸の min の最小値、max の最大値を取った AABB を返してください\n        BoundingBox::new([0.0; 3], [0.0; 3])\n    }\n\n    pub fn surface_area(&self) -> f32 {\n        // TODO: 表面積 2 * (dx*dy + dy*dz + dz*dx) を返してください\n        0.0\n    }\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_surface_area() {\n        let b = BoundingBox::new([0.0, 0.0, 0.0], [2.0, 3.0, 4.0]);\n        // dx=2, dy=3, dz=4 => 2*(6 + 12 + 8) = 2 * 26 = 52\n        assert_eq!(b.surface_area(), 52.0);\n    }\n\n    #[test]\n    fn test_union() {\n        let b1 = BoundingBox::new([-1.0, 0.0, 2.0], [3.0, 4.0, 5.0]);\n        let b2 = BoundingBox::new([0.0, -2.0, 1.0], [2.0, 1.0, 6.0]);\n        let u = b1.union_box(&b2);\n        assert_eq!(u.min, [-1.0, -2.0, 1.0]);\n        assert_eq!(u.max, [3.0, 4.0, 6.0]);\n    }\n}",
+        "solution": "impl BoundingBox {\n    pub fn new(min: [f32; 3], max: [f32; 3]) -> Self {\n        Self { min, max }\n    }\n\n    pub fn union_box(&self, other: &BoundingBox) -> BoundingBox {\n        let min = [\n            self.min[0].min(other.min[0]),\n            self.min[1].min(other.min[1]),\n            self.min[2].min(other.min[2]),\n        ];\n        let max = [\n            self.max[0].max(other.max[0]),\n            self.max[1].max(other.max[1]),\n            self.max[2].max(other.max[2]),\n        ];\n        BoundingBox::new(min, max)\n    }\n\n    pub fn surface_area(&self) -> f32 {\n        let dx = (self.max[0] - self.min[0]).max(0.0);\n        let dy = (self.max[1] - self.min[1]).max(0.0);\n        let dz = (self.max[2] - self.min[2]).max(0.0);\n        2.0 * (dx * dy + dy * dz + dz * dx)\n    }\n}",
+        "hint": "min の各成分は self.min[i].min(other.min[i])、max は self.max[i].max(other.max[i]) で計算します。"
+      }
+    },
+    {
+      "id": 8,
+      "title": "Chapter 8: Reflection Models",
+      "subtitle": "双方向反射率分布関数・微小面理論・フレネルの式",
+      "quizzes": [
+        {
+          "id": "q8-1",
+          "question": "物理ベースレンダリングにおける BRDF (双方向反射率分布関数) f_r(ω_i, ω_o) が満たすべき基本的物理制約の組み合わせとして正しいものはどれか？",
+          "options": [
+            "ヘルムホルツの相反性 (Helmholtz Reciprocity) と エネルギー保存則 (Energy Conservation)",
+            "フェルマーの原理 と スネルの法則",
+            "ドップラー効果 と コンプトン散乱",
+            "ガウスの法則 と アンペールの法則"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: BRDF の物理的性質】\n物理的に妥当な BRDF は次の 2 つを厳格に満たす必要があります：\n1. ヘルムホルツの相反性: 入射方向と反射方向を入れ替えても値が変わらない (f_r(ω_i, ω_o) = f_r(ω_o, ω_i))\n2. エネルギー保存則: 入射した放射束以上のエネルギーを反射しない (任意の ω_i に対し ∫_{2π} f_r(ω_i, ω_o) cosθ_o dω_o <= 1)"
+        },
+        {
+          "id": "q8-2",
+          "question": "拡散反射率（アルベド）が ρ の完全拡散面（ランバート面: Lambertian）において、BRDF 値 f_r が ρ/π となる数学的根拠はどれか？",
+          "options": [
+            "半球上の cosθ 重み付け立体角積分 ∫_{2π} cosθ dω の値が π になるため",
+            "円周率 π が光の反射波長を表す定数であるため",
+            "全球の立体角 4π の半分が 2π であり、そのさらに半分が π であるため",
+            "フレネル反射係数の積分値が常に 1/π に収束するため"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: Lambertian BRDF と π 正規化】\n定数 BRDF 値 c をエネルギー保存則 ∫_{2π} c cosθ dω = ρ に代入すると、半球積分 ∫_{0}^{2π} dφ ∫_{0}^{π/2} cosθ sinθ dθ = π となるため、c * π = ρ、すなわち c = ρ / π と導出されます。"
+        },
+        {
+          "id": "q8-3",
+          "question": "微小面理論 (Microfacet Theory) に基づく鏡面反射 BRDF モデル f_r(ω_i, ω_o) = (D * G * F) / (4 * cosθ_i * cosθ_o) における G 項の物理的役割はどれか？",
+          "options": [
+            "微小なファセット同士が互いを遮ったり（シャドウイング）、反射光を遮蔽（マスキング）する幾何減衰率を表す",
+            "光の屈折率と偏光状態を決定する",
+            "微小面の法線がハーフベクトル h を向いている確率密度を表す",
+            "表面の粗さパラメータを線形化する"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: Microfacet・幾何遮蔽関数 G】\nマイクロファセット BRDF の 3 要素は次の通りです：\n- D: 微小面法線分布関数 (NDF: 例 GGX)\n- F: フレネル反射率 (Fresnel term)\n- G: 幾何減衰関数 (Geometric Masking-Shadowing term)。粗い表面では微小な凹凸により入射光や出射光が隣の山に遮られるため、これを補正します。"
+        }
+      ],
+      "coding": {
+        "id": "c8",
+        "title": "Schlick のフレネル反射率近似式の計算",
+        "description": "垂直入射時の反射率 R_0 と入射角の余弦 cos_theta = cosθ ∈ [0, 1] を受け取り、Schlick の近似式 R(θ) = R_0 + (1 - R_0) * (1 - cosθ)^5 を計算して返す関数 schlick_fresnel を実装してください。",
+        "initial_code": "// Chapter 8: Schlick Fresnel approximation\npub fn schlick_fresnel(cos_theta: f32, r0: f32) -> f32 {\n    // TODO: R_0 + (1.0 - R_0) * (1.0 - cos_theta)^5 を計算して返してください\n    0.0\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_normal_incidence() {\n        // 垂直入射 (cos_theta = 1.0) のとき R = R_0\n        let r = schlick_fresnel(1.0, 0.04);\n        assert!((r - 0.04).abs() < 1e-5);\n    }\n\n    #[test]\n    fn test_grazing_angle() {\n        // カスレ角 (cos_theta = 0.0) のとき R = 1.0\n        let r = schlick_fresnel(0.0, 0.04);\n        assert!((r - 1.0).abs() < 1e-5);\n    }\n\n    #[test]\n    fn test_intermediate() {\n        let r = schlick_fresnel(0.5, 0.2);\n        // 0.2 + (1.0 - 0.2) * (0.5)^5 = 0.2 + 0.8 * 0.03125 = 0.2 + 0.025 = 0.225\n        assert!((r - 0.225).abs() < 1e-4);\n    }\n}",
+        "solution": "pub fn schlick_fresnel(cos_theta: f32, r0: f32) -> f32 {\n    let c = (1.0 - cos_theta).clamp(0.0, 1.0);\n    let c5 = c * c * c * c * c;\n    r0 + (1.0 - r0) * c5\n}",
+        "hint": "c = (1.0 - cos_theta) を計算し、c.powi(5) または 5回掛け合わせたものに (1.0 - r0) を掛け、r0 を足します。"
+      }
+    },
+    {
+      "id": 9,
+      "title": "Chapter 9: Texture and Materials",
+      "subtitle": "テクスチャマッピング・バイリニア補間・接空間",
+      "quizzes": [
+        {
+          "id": "q9-1",
+          "question": "2次元テクスチャのバイリニア補間 (Bilinear Interpolation) において、4つの近傍テクセル値 (c00, c10, c01, c11) と小数オフセット (s, t) ∈ [0, 1]^2 を用いた補間式として正しいものはどれか？",
+          "options": [
+            "(1-s)(1-t) c00 + s(1-t) c10 + (1-s)t c01 + st c11",
+            "s*t * (c00 + c10 + c01 + c11) / 4",
+            "(c00 + c10) * (1-s) + (c01 + c11) * t",
+            "max(c00, c10, c01, c11) * (s + t)"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: バイリニア補間 (Bilinear Interpolation)】\nバイリニア補間は、まず X 方向に線形補間 c_bottom = (1-s)c00 + s c10, c_top = (1-s)c01 + s c11 を行い、次にその結果を Y 方向に (1-t)c_bottom + t c_top と線形補間します。展開すると (1-s)(1-t)c00 + s(1-t)c10 + (1-s)t c01 + st c11 となります。"
+        },
+        {
+          "id": "q9-2",
+          "question": "ミップマップ (Mipmap) のピラミッド階層によるエイリアシング防止の原理として最も適切なものはどれか？",
+          "options": [
+            "テクスチャの解像度を 1/2 ずつ事前に縮小・平均化しておくことで、サンプリング定理におけるナイキスト周波数以上の高周波成分をローパスフィルタで除去する",
+            "すべてのテクスチャを無損失圧縮 (PNG) 形式に変換する",
+            "テクスチャのガンマ値を 2.2 から 1.0 に補正する",
+            "UV 座標の範囲を [0, 1] から [-1, 1] に正規化する"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: ミップマップ・ナイキスト周波数】\n遠方の物体など、画面上の 1 ピクセルにテクスチャの多数のテクセルが投影される場合、単純サンプリングを行うとナイキスト周波数を下回りモアレやフリッカー（エイリアシング）が発生します。事前に平均化・ダウンサンプリングされたミップマップ階層を選択することで高周波を除去し、安定したサンプリングを実現します。"
+        },
+        {
+          "id": "q9-3",
+          "question": "法線マッピングにおいて、テクスチャに記録された [0, 1] の RGB 値を接空間の法線ベクトル (x, y, z) ∈ [-1, 1] に復元する一般的な変換式はどれか？",
+          "options": [
+            "v = 2.0 * color - 1.0",
+            "v = color / 255.0",
+            "v = sqrt(color)",
+            "v = color * 2.0 * π"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: 法線マップの復元・接空間】\n法線ベクトル成分は [-1.0, 1.0] の範囲を取りますが、一般的な 8bit 画像は [0.0, 1.0] に正規化されています。したがって各 RGB 成分から v = 2.0 * rgb - 1.0 の線形変換を行って [-1, 1] の接空間法線を復元します（平坦な法線 [0, 0, 1] は RGB(0.5, 0.5, 1.0) の青紫色になります）。"
+        }
+      ],
+      "coding": {
+        "id": "c9",
+        "title": "2Dバイリニア補間 (Bilinear Interpolation) の実装",
+        "description": "4つの値 c00, c10, c01, c11 と、各軸の重み係数 s, t ∈ [0, 1] を受け取り、バイリニア補間値を計算して返す関数 bilinear_interp を実装してください。",
+        "initial_code": "// Chapter 9: Bilinear interpolation\npub fn bilinear_interp(c00: f32, c10: f32, c01: f32, c11: f32, s: f32, t: f32) -> f32 {\n    // TODO: (1-s)(1-t)c00 + s(1-t)c10 + (1-s)t c01 + st c11 を計算して返してください\n    0.0\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_corners() {\n        assert_eq!(bilinear_interp(10.0, 20.0, 30.0, 40.0, 0.0, 0.0), 10.0);\n        assert_eq!(bilinear_interp(10.0, 20.0, 30.0, 40.0, 1.0, 0.0), 20.0);\n        assert_eq!(bilinear_interp(10.0, 20.0, 30.0, 40.0, 0.0, 1.0), 30.0);\n        assert_eq!(bilinear_interp(10.0, 20.0, 30.0, 40.0, 1.0, 1.0), 40.0);\n    }\n\n    #[test]\n    fn test_center() {\n        // (10 + 20 + 30 + 40) / 4 = 25.0\n        assert_eq!(bilinear_interp(10.0, 20.0, 30.0, 40.0, 0.5, 0.5), 25.0);\n    }\n}",
+        "solution": "pub fn bilinear_interp(c00: f32, c10: f32, c01: f32, c11: f32, s: f32, t: f32) -> f32 {\n    (1.0 - s) * (1.0 - t) * c00\n        + s * (1.0 - t) * c10\n        + (1.0 - s) * t * c01\n        + s * t * c11\n}",
+        "hint": "重み (1.0 - s)*(1.0 - t), s*(1.0 - t), (1.0 - s)*t, s*t をそれぞれ各テクセルに掛けて合計します。"
+      }
+    },
+    {
+      "id": 10,
+      "title": "Chapter 10: Volume Scattering",
+      "subtitle": "ボリューム散乱・放射伝達方程式・Henyey-Greenstein",
+      "quizzes": [
+        {
+          "id": "q10-1",
+          "question": "参加媒質 (Participating Media) における全消散係数 (Extinction Coefficient: σ_t) の定義として正しいものはどれか？（吸収係数 σ_a、散乱係数 σ_s とする）",
+          "options": [
+            "σ_t = σ_a + σ_s",
+            "σ_t = σ_a * σ_s",
+            "σ_t = σ_s / σ_a",
+            "σ_t = σ_a - σ_s"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: 消散係数 (Extinction Coefficient: σ_t)】\n光がボリューム内を通過する際、光子の減少（消散）は媒質による『吸収 (Absorption: σ_a)』と光線外への『外部散乱 (Out-scattering: σ_s)』の両方によって引き起こされます。したがって全消散係数は両者の和 σ_t = σ_a + σ_s となります。"
+        },
+        {
+          "id": "q10-2",
+          "question": "均質媒質中を距離 d だけ光線が進んだときの光の透過率 (Transmittance: T_r) を与えるビール・ランバートの法則 (Beer-Lambert Law) の式はどれか？",
+          "options": [
+            "T_r = exp(-σ_t * d)",
+            "T_r = 1.0 - σ_t * d",
+            "T_r = 1.0 / (1.0 + σ_t * d^2)",
+            "T_r = log(σ_t * d)"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: ビール・ランバートの法則 (Beer-Lambert Law)】\n媒質内での光の微分減少 dL = -σ_t L dx を積分すると、距離 d を進んだ透過率は指数関数 T_r(d) = exp(-σ_t * d) となります。光学距離 (Optical Thickness) τ = σ_t * d が大きくなるほど透過率は指数関数的に減少します。"
+        },
+        {
+          "id": "q10-3",
+          "question": "ヘニエイ・グリーンスタイン位相関数 (Henyey-Greenstein Phase Function) における異方性パラメータ g ∈ (-1, 1) が g > 0 であるときの媒質の散乱特性はどれか？",
+          "options": [
+            "前方散乱 (Forward Scattering) が優勢（霧や雲、生体組織など）",
+            "完全等方散乱 (Isotropic Scattering)",
+            "後方散乱 (Backward Scattering) が優勢",
+            "光の屈折率が虚数になる"
+          ],
+          "answer": 0,
+          "explanation": "【キーワード: Henyey-Greenstein 位相関数・パラメータ g】\n位相関数 p(cosθ) はボリューム内で散乱された光の角度分布（サーフェスにおける BRDF に相当）を記述します。HG 位相関数のパラメータ g は平均余弦 cosθ を表し、g=0 は等方散乱、g>0 は光線の進行方向へ散乱されやすい前方散乱、g<0 は入射元へ跳ね返りやすい後方散乱を表します。"
+        }
+      ],
+      "coding": {
+        "id": "c10",
+        "title": "ビール・ランバート則による透過率の計算",
+        "description": "消散係数 sigma_t >= 0.0 と媒質通過距離 distance >= 0.0 を受け取り、ビール・ランバートの法則 T_r = exp(-sigma_t * distance) に基づく透過率を計算して返す関数 beer_lambert を実装してください。",
+        "initial_code": "// Chapter 10: Beer-Lambert Transmittance\npub fn beer_lambert(sigma_t: f32, distance: f32) -> f32 {\n    // TODO: exp(-sigma_t * distance) を計算して返してください\n    1.0\n}",
+        "test_code": "#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn test_zero_distance() {\n        assert_eq!(beer_lambert(0.5, 0.0), 1.0);\n    }\n\n    #[test]\n    fn test_transmittance() {\n        let t = beer_lambert(0.2, 5.0); // exp(-1.0) ≈ 0.367879\n        assert!((t - (-1.0_f32).exp()).abs() < 1e-5);\n    }\n}",
+        "solution": "pub fn beer_lambert(sigma_t: f32, distance: f32) -> f32 {\n    (-sigma_t * distance).exp()\n}",
+        "hint": "(-sigma_t * distance).exp() を計算します。"
+      }
+    }
+  ]
+}

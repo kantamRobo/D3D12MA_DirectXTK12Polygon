@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "Model.h"
 #include <fstream>
 #include <iostream>
@@ -17,6 +17,7 @@ using namespace Microsoft::WRL;
 // ---------------------------------------------------------------------------
 Model::~Model()
 {
+    if (m_lambertCbAllocation) { m_lambertCbAllocation->Release(); m_lambertCbAllocation = nullptr; }
     if (m_vertexAllocation) { m_vertexAllocation->Release(); m_vertexAllocation = nullptr; }
     if (m_indexAllocation) { m_indexAllocation->Release();  m_indexAllocation = nullptr; }
     if (m_allocator) { m_allocator->Release();        m_allocator = nullptr; }
@@ -28,13 +29,13 @@ bool Model::LoadModel(const char* path)
 
 
     vertices = GenerateVertices(path);
-    // スケール値を設定
+    // 
     float scaleFactor = 10.0f;
 
 
     for (int i = 0; i < vertices.size(); i++)
     {
-        //乗算　vertices[i].position = vertices[i].position,100.0f;
+        //vertices[i].position = vertices[i].position,100.0f;
     }
 
 
@@ -48,7 +49,7 @@ std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(c
 {
 
 
-	//aisceneの読み込み
+	//aiscene
     Assimp::Importer importer;
 
     const aiScene* scene = importer.ReadFile(
@@ -62,7 +63,7 @@ std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(c
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {
         std::cerr << "Assimp error: " << importer.GetErrorString() << std::endl;
-		//出力ウィンドウにエラーを表示
+		//
 		
 		OutputDebugStringA(importer.GetErrorString());
 
@@ -100,7 +101,7 @@ std::vector<DirectX::VertexPositionNormalColorTexture> Model::GenerateVertices(c
             outvertices.push_back(vertex);
         }
 
-        // インデックスの設定
+        // 
         for (unsigned int j = 0; j < mesh->mNumFaces; j++)
         {
             aiFace face = mesh->mFaces[j];
@@ -177,6 +178,7 @@ void Model::LoadAssets(DX::DeviceResources* DR,const char* filePath)
     auto device = DR->GetD3DDevice();
 
     // Release any existing D3D12MA resources (supports re-initialization after device loss).
+    if (m_lambertCbAllocation) { m_lambertCbAllocation->Release(); m_lambertCbAllocation = nullptr; }
     if (m_vertexAllocation) { m_vertexAllocation->Release(); m_vertexAllocation = nullptr; }
     if (m_indexAllocation) { m_indexAllocation->Release();  m_indexAllocation = nullptr; }
     if (m_allocator) { m_allocator->Release();        m_allocator = nullptr; }
@@ -218,7 +220,7 @@ void Model::LoadAssets(DX::DeviceResources* DR,const char* filePath)
     // Build the global root signature.
     CreateGlobalRootSignature(device);
 
-    // Compile HLSL → DXIL and create the raytracing PSO.
+    // Compile HLSL  DXIL and create the raytracing PSO.
     CreateRaytracingPipelineStateObject(DR);
 
     // Create the CBV/SRV/UAV descriptor heap.
@@ -229,6 +231,15 @@ void Model::LoadAssets(DX::DeviceResources* DR,const char* filePath)
 	LoadModel(filePath);
     // Generate sphere geometry and upload to GPU via D3D12MA.
     BuildGeometry(DR);
+
+    // Create and initialize Lambert constant buffer via D3D12MA
+    DX::ThrowIfFailed(CreateLambertConstantBuffer(m_allocator));
+    LambertConstantBuffer initialLambert = {};
+    initialLambert.LightDir = XMFLOAT4(0.577f, -0.577f, 0.577f, 0.0f);
+    initialLambert.LightColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    initialLambert.MaterialColor = XMFLOAT4(0.3f, 0.7f, 1.0f, 1.0f);
+    initialLambert.AmbientColor = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+    UpdateLambertCB(initialLambert);
 
     // Build BLAS + TLAS (includes world transform matrix in instance descriptor).
     BuildAccelerationStructures(DR);
@@ -569,6 +580,46 @@ void Model::CreateConstantBuffers(ID3D12Device* device)
 // ---------------------------------------------------------------------------
 // Helpers for acceleration-structure buffer allocation (DEFAULT heap).
 // ---------------------------------------------------------------------------
+// ===========================================================================
+// CreateLambertConstantBuffer
+// Allocates a 256-byte aligned upload buffer using D3D12MA and persistently maps it.
+// ===========================================================================
+HRESULT Model::CreateLambertConstantBuffer(D3D12MA::Allocator* allocator)
+{
+    if (!allocator) return E_POINTER;
+
+    D3D12MA::ALLOCATION_DESC allocDesc = {};
+    allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+    // 256-byte alignment calculation
+    const UINT64 bufferSize = (sizeof(LambertConstantBuffer) + 255) & ~255;
+    CD3DX12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+
+    HRESULT hr = allocator->CreateResource(
+        &allocDesc,
+        &resDesc,
+        D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr,
+        &m_lambertCbAllocation,
+        IID_PPV_ARGS(&m_lambertCbResource)
+    );
+    if (FAILED(hr)) return hr;
+
+    m_lambertCbResource->SetName(L"LambertConstantBuffer");
+
+    // Persistent mapping
+    CD3DX12_RANGE readRange(0, 0);
+    return m_lambertCbResource->Map(0, &readRange, reinterpret_cast<void**>(&m_pMappedLambertData));
+}
+
+void Model::UpdateLambertCB(const LambertConstantBuffer& data)
+{
+    if (m_pMappedLambertData)
+    {
+        memcpy(m_pMappedLambertData, &data, sizeof(LambertConstantBuffer));
+    }
+}
+
 void Model::CreateUAVBuffer(
     ID3D12Device* device, UINT64 bufferSize, ID3D12Resource** ppResource,
     D3D12_RESOURCE_STATES initialState, const wchar_t* name)
@@ -666,7 +717,7 @@ void Model::BuildAccelerationStructures(DX::DeviceResources* DR)
 
     // ---- TLAS instance descriptor (stores the sphere world-transform matrix) ----
     D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
-    // World transform: 3×4 row-major affine matrix.
+    // World transform: 34 row-major affine matrix.
     // Here: identity (sphere centered at origin, unit scale).
     // To translate/scale the sphere, modify these values before building the TLAS.
     instanceDesc.Transform[0][0] = 1.0f; // X-axis scale
@@ -775,7 +826,7 @@ void Model::UpdateSceneConstants(DX::DeviceResources* DR)
     XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspectRatio, 0.1f, 1000.0f);
     XMMATRIX viewProj = XMMatrixMultiply(view, proj);
 
-    // 重要: HLSL既定(column-major)に合わせて転置して渡す
+    // : HLSL(column-major)
     m_sceneCBData.projectionToWorld = XMMatrixTranspose(XMMatrixInverse(nullptr, viewProj));
     m_sceneCBData.cameraPosition = eye;
     m_sceneCBData.lightPosition = XMVectorSet(3.0f, 5.0f, -3.0f, 1.0f);
@@ -787,6 +838,14 @@ void Model::UpdateSceneConstants(DX::DeviceResources* DR)
     DX::ThrowIfFailed(m_sceneCBResource->Map(0, &readRange, &pMapped));
     memcpy(pMapped, &m_sceneCBData, sizeof(m_sceneCBData));
     m_sceneCBResource->Unmap(0, nullptr);
+
+    // Update Lambert constant buffer
+    LambertConstantBuffer lambertData = {};
+    lambertData.LightDir = XMFLOAT4(0.577f, -0.577f, 0.577f, 0.0f);
+    lambertData.LightColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    lambertData.MaterialColor = XMFLOAT4(0.3f, 0.7f, 1.0f, 1.0f);
+    lambertData.AmbientColor = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+    UpdateLambertCB(lambertData);
 }
 
 // ===========================================================================
@@ -827,10 +886,19 @@ void Model::Render(DX::DeviceResources* DR)
         SphereRaytracing::GlobalRootSignatureParams::VertexBuffers,
         vbGpuHandle);
 
-    // slot 4: Sphere constant buffer (inline CBV)
-    commandList->SetComputeRootConstantBufferView(
-        SphereRaytracing::GlobalRootSignatureParams::SphereConstant,
-        m_sphereCBResource->GetGPUVirtualAddress());
+    // slot 4: Lambert constant buffer (inline CBV)
+    if (m_lambertCbResource)
+    {
+        commandList->SetComputeRootConstantBufferView(
+            SphereRaytracing::GlobalRootSignatureParams::SphereConstant,
+            m_lambertCbResource->GetGPUVirtualAddress());
+    }
+    else
+    {
+        commandList->SetComputeRootConstantBufferView(
+            SphereRaytracing::GlobalRootSignatureParams::SphereConstant,
+            m_sphereCBResource->GetGPUVirtualAddress());
+    }
 
     // Set PSO and dispatch rays.
     commandList->SetPipelineState1(m_dxrStateObject.Get());
